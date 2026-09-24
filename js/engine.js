@@ -292,8 +292,11 @@ const layer = $('#layer');
 const wins = {};
 let zTop = 10, cascade = 0, tearing = false;
 function focusWin(W) {
+  // Keep window z-indexes well below menus (8000+) in long sessions by renumbering now and then.
+  if (zTop > 900) { zTop = 10; Object.values(wins).sort((a, b) => (a.el.style.zIndex % 7000) - (b.el.style.zIndex % 7000)).forEach(o => { o.el.style.zIndex = (o.modal ? 7000 : 0) + (++zTop); }); }
   Object.values(wins).forEach(o => o.el.classList.toggle('active', o === W));
-  if (W) { W.el.style.zIndex = ++zTop; W.el.classList.remove('min'); W.minimized = false; if (dos && document.activeElement === dos.input) dos.input.blur(); }
+  if (W) { W.el.style.zIndex = (W.modal ? 7000 : 0) + (++zTop); // dialogs always stay above ordinary windows
+    W.el.classList.remove('min'); W.minimized = false; if (dos && document.activeElement === dos.input) dos.input.blur(); }
   renderTasks();
 }
 function activeWin() { return Object.values(wins).find(o => o.el.classList.contains('active') && !o.minimized); }
@@ -1880,7 +1883,7 @@ function setEra(id) {
   ERA_IDS.forEach(k => screen.classList.toggle('era-' + k, k === era.id));
   document.title = 'Log On to ' + era.year;
   $('#st-splash').innerHTML = era.splash;
-  applyWall(); setupTaskbar(); tickClock();
+  applyWall(); setupTaskbar(); tickClock(); renderRoom();
   try { history.replaceState(null, '', '#' + era.id); } catch (e) {}
 }
 function renderPower() {
@@ -1894,6 +1897,7 @@ function renderPower() {
     b.onclick = () => { setEra(id); renderPower(); sfx.click(); };
     box.appendChild(b);
   });
+  layoutRoom();
 }
 function openTW(anchor) {
   const p = $('#tw-panel');
@@ -1908,7 +1912,7 @@ function openTW(anchor) {
     p.appendChild(b);
   });
   p.classList.add('on');
-  const S = screen.getBoundingClientRect();
+  const S = { left: 0, top: 0, width: innerWidth, height: innerHeight };
   const r = (anchor || (stageOn('st-desk') ? $('#tw-task') : $('#tw-float'))).getBoundingClientRect();
   const pr = p.getBoundingClientRect();
   p.style.left = Math.max(4, Math.min(r.right - S.left - pr.width, S.width - pr.width - 4)) + 'px';
@@ -1933,12 +1937,110 @@ async function switchEra(id) {
   if (id === era.id && booted && stageOn('st-desk')) return;
   bootTok++; skipping = true; booted = false;
   teardown();
-  if (stageOn('st-power')) { setEra(id); renderPower(); return; }
+  if (stageOn('st-power') || stageOn('st-bye')) { setEra(id); renderPower(); if (stageOn('st-bye')) show('st-power'); return; }
   powerAnim('poweroff'); noise(0.08, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 });
   await sleep(480);
   screen.classList.remove('poweroff');
-  setEra(id);
+  if (!roomOn) { show('st-power'); setLeds(false); await zoomOut(); }
+  setEra(id); renderPower();
+  await sleep(roomOn ? 500 : 0);
   boot();
+}
+
+/* ---------- the desk: you see the computer first, it boots on its little monitor, then we zoom into the screen ---------- */
+const room = $('#room'), VW = 640, VH = 480; // the screen is laid out at 640x480 (VGA) while it sits in the monitor
+let roomOn = false;
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rigHTML(id) {
+  const drive525 = (x, y) => `<i class="dr d525" style="left:${x}u;top:${y}u"></i>`;
+  const u = s => s.replace(/(-?[\d.]+)u/g, 'calc(var(--u)*$1)');
+  const common = `<i class="kb"></i>`;
+  const R = {
+    '1985': `<i class="case" style="left:14u;top:50u;width:72u;height:12u">${drive525(40, 2)}${drive525(56, 2)}<i class="badge" style="left:4u;top:4u">HORIZON PC</i><button class="pbtn" style="left:4u;top:7.2u" aria-label="Power switch"><i class="led"></i></button><i class="led hdd" style="left:10u;top:8.4u"></i></i>
+      <i class="mon" style="left:26u;top:9u;width:48u;height:41u"><i class="glass" style="left:4u;top:3u;width:40u;height:30u"></i><i class="brand">MONOCHROME DISPLAY</i><i class="knob" style="left:40u;top:35u"></i><i class="knob" style="left:36u;top:35u"></i></i>${common}`,
+    '1990': `<i class="case" style="left:14u;top:50u;width:72u;height:12u"><i class="dr d525" style="left:44u;top:2u"></i><i class="dr d35" style="left:60u;top:3.2u"></i><i class="badge" style="left:4u;top:3u">HORIZON 386</i><i class="turbo" style="left:22u;top:7u">TURBO</i><button class="pbtn" style="left:4u;top:7u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:10u;top:8.2u"></i></i>
+      <i class="mon" style="left:26u;top:9u;width:48u;height:41u"><i class="glass" style="left:4u;top:3u;width:40u;height:30u"></i><i class="brand">VGA COLOR</i><i class="knob" style="left:40u;top:35u"></i></i>${common}<i class="mouse" style="left:88u;top:67u"></i>`,
+    '1995': `<i class="tower" style="left:81u;top:20u;width:15u;height:42u"><i class="dr cd" style="left:1.5u;top:4u"></i><i class="dr d35 v" style="left:4u;top:11u"></i><i class="badge" style="left:2u;top:17u">PENTIUM</i><button class="pbtn" style="left:5.5u;top:28u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:10u;top:36u"></i></i>
+      <i class="spk" style="left:8u;top:40u"></i><i class="mon big" style="left:22u;top:6u;width:52u;height:48u"><i class="glass" style="left:4u;top:4u;width:44u;height:33u"></i><i class="brand">Multimedia 15"</i><i class="knob" style="left:44u;top:41u"></i></i><i class="stand" style="left:38u;top:54u"></i>${common}<i class="mouse" style="left:82u;top:67u"></i>`,
+    '2000': `<i class="tower slim" style="left:82u;top:12u;width:16u;height:50u"><i class="dr cd" style="left:1.5u;top:4u"></i><i class="dr cd" style="left:1.5u;top:9u"></i><i class="dr d35 v" style="left:4u;top:15u"></i><i class="badge" style="left:2u;top:22u">PENTIUM III</i><button class="pbtn" style="left:6u;top:33u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:11u;top:42u"></i></i>
+      <i class="spk tall" style="left:6u;top:34u"></i><i class="mon big" style="left:18u;top:3u;width:56u;height:51u"><i class="glass" style="left:4u;top:4u;width:48u;height:36u"></i><i class="brand">17" FLAT SCREEN</i><i class="cam"></i></i><i class="stand" style="left:36u;top:54u"></i>${common}<i class="mouse opt" style="left:80u;top:67u"></i>`
+  };
+  return u(R[id] || R['1990']);
+}
+function renderRoom() {
+  room.dataset.era = era.id;
+  room.querySelector('.rm-rig').innerHTML = rigHTML(era.id);
+  room.querySelector('.pbtn').onclick = roomPower;
+  layoutRoom();
+}
+function layoutRoom() {
+  if (!roomOn) return;
+  const W = innerWidth, H = innerHeight, land = W >= H * 1.1, ui = room.querySelector('.rm-ui'), rig = room.querySelector('.rm-rig');
+  room.classList.toggle('land', land);
+  let ax = 0, ay = 0, aw = W, ah = H;
+  if (land) { const uiw = Math.min(W * 0.42, 480); ax = uiw; aw = W - uiw; }
+  else { const uih = ui.offsetHeight; ay = uih; ah = H - uih; }
+  const u = Math.max(2, Math.min(aw / 102, ah / 80));
+  rig.style.setProperty('--u', u + 'px');
+  const left = ax + (aw - 100 * u) / 2, top = ay + Math.max(0, (ah - 78 * u) / 2);
+  rig.style.left = left + 'px'; rig.style.top = top + 'px';
+  room.querySelector('.rm-desk').style.top = (top + 62 * u) + 'px';
+  fitScreen();
+}
+function glass() { const g = room.querySelector('.glass'); return g ? g.getBoundingClientRect() : { left: 0, top: 0, width: VW, height: VH }; }
+const fitTransform = g => `translate(${g.left}px,${g.top}px) scale(${g.width / VW})`;
+function fitScreen() { if (roomOn) { const g = glass(); screen.style.transform = fitTransform(g); const gl = $('#glare'); Object.assign(gl.style, { left: g.left + 'px', top: g.top + 'px', width: g.width + 'px', height: g.height + 'px' }); } }
+function zoomed(g) {
+  const W = innerWidth, H = innerHeight, z = Math.max(W / g.width, H / g.height) * 1.04;
+  const tx = W / 2 - (g.left + g.width / 2) * z, ty = H / 2 - (g.top + g.height / 2) * z;
+  return { room: `translate(${tx}px,${ty}px) scale(${z})`, screen: `translate(${tx + g.left * z}px,${ty + g.top * z}px) scale(${g.width / VW * z})` };
+}
+function enterRoom() { roomOn = true; document.body.classList.add('in-room'); layoutRoom(); }
+function exitRoom() {
+  roomOn = false; document.body.classList.remove('in-room');
+  room.style.transition = room.style.transform = screen.style.transition = screen.style.transform = '';
+  screen.classList.remove('fadein'); void screen.offsetWidth; screen.classList.add('fadein');
+}
+const ZOOM = 'transform .95s cubic-bezier(.55,0,.25,1)';
+async function zoomIn() {
+  if (!roomOn) return;
+  if (!reduceMotion()) {
+    const z = zoomed(glass());
+    room.style.transformOrigin = '0 0';
+    room.style.transition = screen.style.transition = ZOOM;
+    room.style.transform = z.room; screen.style.transform = z.screen;
+    $('#glare').style.opacity = 0;
+    await sleep(950);
+  }
+  exitRoom();
+}
+async function zoomOut() {
+  if (roomOn) return;
+  enterRoom();
+  if (reduceMotion()) return;
+  const g = glass(), z = zoomed(g);
+  room.style.transformOrigin = '0 0';
+  room.style.transition = screen.style.transition = 'none';
+  room.style.transform = z.room; screen.style.transform = z.screen; $('#glare').style.opacity = 0;
+  void room.offsetWidth;
+  room.style.transition = screen.style.transition = ZOOM;
+  room.style.transform = ''; screen.style.transform = fitTransform(g);
+  await sleep(950);
+  room.style.transition = screen.style.transition = ''; $('#glare').style.opacity = '';
+}
+function setLeds(on, busy) { room.classList.toggle('on', !!on); room.classList.toggle('busy', !!busy); }
+function roomPower() {
+  if (stageOn('st-bios') || stageOn('st-splash')) { // pressing power while it boots turns it off, like a real one
+    bootTok++; skipping = true; $('#skip').classList.remove('on');
+    noise(0.06, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 }); setLeds(false); renderPower(); show('st-power'); return;
+  }
+  $('#pwr').click();
+}
+function initRoom() {
+  document.body.append($('#skip'), $('#tw-float'), $('#tw-panel'));
+  room.querySelector('.rm-ui').appendChild($('.power-box'));
+  window.addEventListener('resize', () => { if (roomOn) layoutRoom(); });
+  enterRoom();
 }
 
 /* ---------- boot / shutdown ---------- */
@@ -1949,7 +2051,7 @@ async function boot() {
   audio();
   bios.innerHTML = '';
   $('#skip').classList.add('on');
-  show('st-bios'); powerAnim('poweron');
+  show('st-bios'); powerAnim('poweron'); setLeds(true, true);
   const live = () => my === bootTok && !skipping;
   const B = {
     live, sfx, tone, bios,
@@ -1973,10 +2075,15 @@ async function boot() {
   const ok = await era.boot(B);
   if (ok && live()) toDesktop();
 }
-function toDesktop() {
+function toDesktop(instant) {
   if (booted) return;
   booted = true; skipping = true;
-  $('#skip').classList.remove('on');
+  $('#skip').classList.remove('on'); setLeds(true, false);
+  if (roomOn && !instant) { const my = bootTok; zoomIn().then(() => { if (my === bootTok && booted) finishDesk(); }); return; }
+  if (roomOn) exitRoom();
+  finishDesk();
+}
+function finishDesk() {
   show('st-desk'); idleT = Date.now();
   $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   setupTaskbar();
@@ -1994,6 +2101,7 @@ function toDesktop() {
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };
 $('#pwr').onclick = () => {
+  if (booted || stageOn('st-bios') || stageOn('st-splash')) return;
   audio();
   noise(0.08, { ft: 'lowpass', f: 300, vol: 0.6, decay: 1 });
   tone(55, 1.2, { type: 'sine', vol: 0.12, decay: 1 });
@@ -2014,7 +2122,10 @@ async function shutdown() {
   await sleep(2600); if (my !== bootTok) return;
   bye.classList.remove('shutting');
   t.textContent = "It's now safe to turn off your computer.";
-  again.hidden = false; again.focus();
+  again.hidden = false;
+  await zoomOut(); if (my !== bootTok) return;
+  renderPower(); setLeds(false);
+  $('#pwr').focus();
 }
 $('#relight').onclick = async () => {
   powerAnim('poweroff'); noise(0.08, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 });
@@ -2028,11 +2139,12 @@ window.addEventListener('resize', () => { Object.values(wins).forEach(W => { if 
 if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
   launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
   own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,
-  desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(); } },
+  desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(true); } },
   era: () => era.id, switchEra, connect: () => { net.connected = true; refreshTray(); Object.values(wins).forEach(W => W.onNet && W.onNet()); }
 };
 
 /* ---------- start ---------- */
+initRoom();
 setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERAS['1990'] ? '1990' : ERA_IDS[0]));
 renderPower();
 })();

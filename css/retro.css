@@ -541,3 +541,86 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .dos-menu button{display:flex;justify-content:space-between;gap:12px;width:100%;background:transparent;color:inherit;border:0;padding:8px 10px;font:19px var(--dos);cursor:pointer;text-align:left;min-height:44px;align-items:center}
 .dos-menu button small{opacity:.7;font-size:15px}
 .dos-menu button.on,.dos-menu button:hover,.dos-menu button:focus-visible{background:var(--phos,#33ff66);color:#000;outline:none}
+
+/* ---- the desk view ---- */
+#room{position:fixed;inset:0;display:none;overflow:hidden;background:#2a2320;z-index:0}
+.in-room #room{display:block}
+.in-room #screen{position:fixed;left:0;top:0;width:640px;height:480px;transform-origin:0 0;border-radius:22px/18px;z-index:1;box-shadow:0 0 0 2px #000}
+.in-room #screen #crt-overlay{border-radius:inherit}
+.in-room #bios{font-size:17px}
+.in-room #relight{display:none}
+#glare{position:fixed;display:none;z-index:2;pointer-events:none;border-radius:22px/18px;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.14),transparent 45%),radial-gradient(ellipse at 50% 50%,transparent 60%,rgba(0,0,0,.35) 100%);transition:opacity .4s}
+.in-room #glare{display:block}
+#screen.fadein{animation:scrfade .35s ease-out}
+@keyframes scrfade{from{opacity:.2}to{opacity:1}}
+#skip,#tw-float{position:fixed}
+#tw-panel{position:fixed}
+#skip{z-index:9800}#tw-float{z-index:9800}#tw-panel{z-index:9900}
+.rm-wall{position:absolute;inset:0}
+.rm-desk{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#8a5a33,#6b4424 18px,#5a381d);box-shadow:0 -4px 0 #9c6a3f,0 -6px 14px rgba(0,0,0,.4)}
+.rm-rig{position:absolute;width:calc(var(--u,6px)*100);height:calc(var(--u,6px)*78)}
+.rm-rig i{position:absolute;display:block;font-style:normal}
+.rm-ui{position:absolute;left:0;top:0;right:0;padding:16px;z-index:3;display:flex;justify-content:center}
+#room.land .rm-ui{right:auto;bottom:0;width:min(42vw,480px);align-items:center}
+.rm-ui .power-box{max-width:30rem;background:rgba(0,0,0,.72);border:1px solid #4a3508;padding:14px 16px 16px;text-align:center;color:#ffb000;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.rm-ui .power-box h1{font:400 clamp(1.7rem,4.2vw,2.8rem)/1 var(--dos);margin:0 0 .5rem;text-shadow:0 0 12px rgba(255,176,0,.55)}
+.rm-ui .power-box p{font:clamp(1rem,2.2vw,1.2rem)/1.2 var(--dos);color:#c98a00;margin:0 auto 1rem}
+.rm-ui .power-box small{margin-top:1rem}
+.rm-ui .eras{margin-bottom:1rem;flex-wrap:wrap}
+.rm-ui .era-card{min-width:0;flex:1 1 6.5rem;padding:6px 8px}
+.rm-ui .era-card b{font-size:1.6rem}
+@media (max-height:560px){.rm-ui .power-box p,.rm-ui .power-box small{display:none}}
+#room:not(.land) .rm-ui .power-box p{display:none}
+#room:not(.land) .rm-ui{padding:10px}
+#room:not(.land) .rm-ui .power-box{padding:10px 12px}
+/* walls by year */
+#room[data-era="1985"] .rm-wall{background:repeating-linear-gradient(90deg,#6e4a2a 0 38px,#5d3d22 38px 40px,#76502e 40px 78px,#5d3d22 78px 80px)}
+#room[data-era="1990"] .rm-wall{background:#d9ccb0 radial-gradient(#c7b894 1.5px,transparent 2px) 0 0/22px 22px}
+#room[data-era="1995"] .rm-wall{background:#2f7c80 linear-gradient(135deg,transparent 45%,rgba(255,255,255,.07) 45% 55%,transparent 55%) 0 0/60px 60px}
+#room[data-era="2000"] .rm-wall{background:linear-gradient(#b8c7d6,#9fb2c6)}
+/* hardware */
+.rm-rig .case,.rm-rig .tower,.rm-rig .mon,.rm-rig .kb,.rm-rig .spk{background:linear-gradient(#e6dfca,#cfc6ab);border:1px solid #8c836a;border-radius:calc(var(--u)*.8);box-shadow:inset 0 calc(var(--u)*.3) 0 rgba(255,255,255,.5),0 calc(var(--u)*.8) calc(var(--u)*1.5) rgba(0,0,0,.35)}
+#room[data-era="2000"] .rm-rig .tower,#room[data-era="2000"] .rm-rig .mon,#room[data-era="2000"] .rm-rig .kb{background:linear-gradient(#ececec,#cfd3d6);border-color:#8d9398}
+.rm-rig .mon{border-radius:calc(var(--u)*2.2)}
+.rm-rig .mon.big{border-radius:calc(var(--u)*2.6) calc(var(--u)*2.6) calc(var(--u)*1.6) calc(var(--u)*1.6)}
+.rm-rig .glass{background:#101312;border-radius:calc(var(--u)*1.6)/calc(var(--u)*1.3);box-shadow:inset 0 0 calc(var(--u)*1.2) #000,0 0 0 calc(var(--u)*.6) #3d3a33}
+#room.on .rm-rig .glass{background:#000}
+.rm-rig .brand{left:0;right:0;bottom:calc(var(--u)*1.6);text-align:center;font:700 calc(var(--u)*1.35) Arial,sans-serif;color:#7d765f;letter-spacing:.1em}
+.rm-rig .badge{font:700 calc(var(--u)*1.25) Arial,sans-serif;color:#6b6450;letter-spacing:.08em;white-space:nowrap}
+.rm-rig .turbo{font:700 calc(var(--u)*1) Arial,sans-serif;color:#6b6450}
+.rm-rig .knob{width:calc(var(--u)*2);height:calc(var(--u)*2);border-radius:50%;background:#8c836a}
+.rm-rig .dr{height:calc(var(--u)*3.4);width:calc(var(--u)*14);background:#b9b095;border:1px solid #6e664f;border-radius:2px}
+.rm-rig .dr.d525::after{content:'';position:absolute;left:20%;right:20%;top:45%;height:14%;background:#2a2720}
+.rm-rig .dr.d35{height:calc(var(--u)*2.2);width:calc(var(--u)*10)}
+.rm-rig .dr.d35::after{content:'';position:absolute;left:15%;right:30%;top:40%;height:20%;background:#2a2720}
+.rm-rig .dr.d35.v{width:calc(var(--u)*7)}
+.rm-rig .dr.cd{width:calc(var(--u)*12);height:calc(var(--u)*3.6);background:#c9c1a6}
+.rm-rig .dr.cd::after{content:'';position:absolute;right:8%;top:30%;width:10%;height:35%;background:#6e664f;border-radius:1px}
+.rm-rig .pbtn{position:absolute;width:calc(var(--u)*4.4);height:calc(var(--u)*3.4);padding:0;border:1px solid #6e664f;border-radius:calc(var(--u)*.6);background:linear-gradient(#d8d0b8,#b3aa8f);cursor:pointer;box-shadow:0 0 0 calc(var(--u)*.4) rgba(255,176,0,.0);animation:pbhint 2.2s ease-in-out infinite}
+#room.on .rm-rig .pbtn{animation:none}
+.rm-rig .pbtn:focus-visible{outline:2px dashed #ffb000;outline-offset:3px}
+@keyframes pbhint{50%{box-shadow:0 0 0 calc(var(--u)*.7) rgba(255,176,0,.55)}}
+.rm-rig .led{width:calc(var(--u)*1);height:calc(var(--u)*1);border-radius:50%;background:#2c4a24}
+.rm-rig .pbtn .led{left:calc(var(--u)*1.6);top:calc(var(--u)*1.1)}
+#room.on .rm-rig .pbtn .led{background:#5f5;box-shadow:0 0 calc(var(--u)*.8) #5f5}
+.rm-rig .led.hdd{background:#4a2c10}
+#room.busy .rm-rig .led.hdd{animation:hdd .35s steps(2) infinite}
+@keyframes hdd{50%{background:#ffa020;box-shadow:0 0 calc(var(--u)*.8) #ffa020}}
+.rm-rig .kb{left:16u;top:65u;left:calc(var(--u)*16);top:calc(var(--u)*65);width:calc(var(--u)*62);height:calc(var(--u)*9);background:repeating-linear-gradient(90deg,transparent 0 calc(var(--u)*.35),rgba(0,0,0,.18) calc(var(--u)*.35) calc(var(--u)*.55),transparent calc(var(--u)*.55) calc(var(--u)*3.3)),repeating-linear-gradient(transparent 0 calc(var(--u)*1.7),rgba(0,0,0,.15) calc(var(--u)*1.7) calc(var(--u)*2)),linear-gradient(#e6dfca,#cfc6ab);transform:perspective(calc(var(--u)*40)) rotateX(35deg);transform-origin:bottom}
+.rm-rig .mouse{width:calc(var(--u)*5);height:calc(var(--u)*7);border-radius:calc(var(--u)*2.5) calc(var(--u)*2.5) calc(var(--u)*2) calc(var(--u)*2);background:linear-gradient(#e6dfca,#cfc6ab);border:1px solid #8c836a}
+.rm-rig .mouse.opt{background:linear-gradient(#f2f2f2,#c9cdd1)}
+.rm-rig .stand{width:calc(var(--u)*20);height:calc(var(--u)*7);background:linear-gradient(#d5cdb4,#b8b095);clip-path:polygon(25% 0,75% 0,100% 100%,0 100%)}
+#room[data-era="2000"] .rm-rig .stand{background:linear-gradient(#e2e5e8,#b9bec3)}
+.rm-rig .spk{width:calc(var(--u)*10);height:calc(var(--u)*20);background:linear-gradient(#3b3b3b,#222);border-color:#111}
+.rm-rig .spk.tall{height:calc(var(--u)*27);width:calc(var(--u)*9)}
+.rm-rig .spk::after{content:'';position:absolute;left:20%;right:20%;top:40%;aspect-ratio:1;border-radius:50%;background:radial-gradient(#555 30%,#111 70%)}
+.rm-rig .cam{left:calc(50% - var(--u)*2.5);top:calc(var(--u)*-4.5);width:calc(var(--u)*5);height:calc(var(--u)*5);border-radius:50%;background:radial-gradient(#224 25%,#ddd 30%,#bbb)}
+@media (prefers-reduced-motion: reduce){.rm-rig .pbtn{animation:none}#room.busy .rm-rig .led.hdd{animation:none;background:#ffa020}}
+.rm-ui .eras{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#room:not(.land) .rm-ui .eras{grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.7rem}
+#room:not(.land) .rm-ui .era-card{padding:5px 6px;font-size:.85rem}
+#room:not(.land) .rm-ui .era-card b{font-size:1.3rem}
+#room:not(.land) .rm-ui .era-card small{display:none}
+#room:not(.land) .rm-ui .power-box small{display:none}
+#room:not(.land) .rm-ui .power-box h1{font-size:clamp(1.4rem,6.5vw,2rem)}
+#room:not(.land) .rm-ui .pwr{padding:8px 20px;font-size:1.3rem}
