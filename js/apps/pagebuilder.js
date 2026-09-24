@@ -790,7 +790,7 @@
           bar.style.width = ((performance.now() - t0) / (secs * 1000) * 100) + '%'; await api.sleep(60);
         }
         bar.style.width = '100%';
-        api.save('pub', { slug: slug(), p: clean(P) });
+        api.save('pub', { slug: slug(), p: clean(P) }); api.stamp('home-page');
         ov.remove(); busy = false;
         api.sfx.tada();
         const r = await api.msgBox('You\'re on the Web!', `Your page is published! Anyone on the Web can visit it at:\n\n${myUrl()}\n\nPress Open NetVoyager to go there now, or find it in the CyberBurbs member directory at ${HOST}`, ['Open NetVoyager', 'OK']);
