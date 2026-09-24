@@ -555,9 +555,29 @@ const WALLET_START = 60, ALLOWANCE = 10, DAILY_EARN_CAP = 60;
 const wallet = () => store.get('wallet', WALLET_START);
 const setWallet = v => store.set('wallet', Math.round(v * 100) / 100);
 const money = v => '$' + Number(v).toFixed(2);
+/* Tester mode: open the site with ?tester to get unlimited money in THIS browser only (every
+   visitor still starts at $60). Leave it from Control Panel or with ?tester=off; money resets to $60. */
+const tester = () => store.get('tester', false);
+(() => {
+  const m = location.search.match(/[?&]tester(?:=([^&]*))?/i); if (!m) return;
+  if ((m[1] || '').toLowerCase() === 'off') leaveTester(true); else store.set('tester', true);
+  try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])tester(=[^&]*)?&?/i, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) {}
+})();
+function leaveTester(keepGames) {
+  store.set('tester', false); setWallet(WALLET_START);
+  if (!keepGames) { store.set('owned', []); store.set('pending', []); }
+  if (typeof wins !== 'undefined' && wins.store && wins.store.refresh) wins.store.refresh();
+}
+function installAll() {
+  const ids = Object.values(PLUGINS).filter(p => p.kind === 'store').map(p => p.id);
+  store.set('owned', [...new Set([...owned(), ...ids])]); store.set('pending', []);
+  refreshShell(); if (wins.store && wins.store.refresh) wins.store.refresh();
+  toast(`Installed all ${ids.length} store games (tester mode).`);
+}
 function earn(amt, why) {
   const day = new Date().toDateString(), log = store.get('earnLog', { day, n: 0 });
   if (log.day !== day) { log.day = day; log.n = 0; }
+  if (tester()) { toast(`+${money(amt)}${why ? ' for ' + why : ''} (tester mode: money is unlimited)`); return amt; }
   const give = Math.max(0, Math.min(amt, DAILY_EARN_CAP - log.n));
   if (!give) return 0;
   log.n += give; store.set('earnLog', log); setWallet(wallet() + give);
@@ -567,7 +587,7 @@ function earn(amt, why) {
 }
 function allowance() {
   const day = new Date().toDateString();
-  if (store.get('allowanceDay', '') === day) return;
+  if (store.get('allowanceDay', '') === day || tester()) return;
   const first = store.get('allowanceDay', '') === '';
   store.set('allowanceDay', day);
   if (!first) { setWallet(wallet() + ALLOWANCE); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance. Spend it at the Software Store!`), 1500); }
@@ -1112,7 +1132,7 @@ function openStore(focusId) {
       const all = Object.values(PLUGINS).filter(p => p.kind === 'store').sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
       const now = all.filter(p => p.year <= era.year), later = all.filter(p => p.year > era.year);
       const S = storeInfo();
-      W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small></div></div>
+      W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">${tester() ? `Tester mode<b>Unlimited</b><small><button class="btn" data-all>Install all games</button></small>` : `Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small>`}</div></div>
         <div class="shop-list">${now.map(p => {
           const own = isOwned(p.id), paid = store.get('pending', []).includes(p.id);
           const act = own ? `<span class="own">✔ Installed</span><button class="btn" data-play>Play</button>` : paid ? `<span class="own">Paid</span><button class="btn" data-inst>Install</button>` : `<span class="price">${money(p.price)}</span><button class="btn" data-buy>Buy</button>`;
@@ -1120,6 +1140,7 @@ function openStore(focusId) {
         }).join('') || '<p>No titles yet. Check back soon!</p>'}</div>
         ${later.length ? `<div class="shop-later"><b>Coming in the future:</b> ${later.map(p => `${esc(p.label)} <small>(needs ${reqOS(p.year)})</small>`).join(', ')}</div>` : ''}</div>`;
       $$('[data-buy]', W.body).forEach(b => b.onclick = () => buy(b.closest('[data-id]').dataset.id));
+      const allB = W.body.querySelector('[data-all]'); if (allB) allB.onclick = installAll;
       $$('[data-play]', W.body).forEach(b => b.onclick = () => launchApp(b.closest('[data-id]').dataset.id));
       $$('[data-inst]', W.body).forEach(b => b.onclick = () => install(PLUGINS[b.closest('[data-id]').dataset.id]));
       const hi = W.body.querySelector('.shop-item.hi'); if (hi) hi.scrollIntoView({ block: 'nearest' });
@@ -1131,13 +1152,13 @@ function openStore(focusId) {
 }
 async function buy(id) {
   const p = PLUGINS[id]; if (!p || isOwned(id)) return;
-  if (wallet() < p.price) {
+  if (!tester() && wallet() < p.price) {
     msgBox('Not enough money', `${p.label} costs ${money(p.price)}, and you have ${money(wallet())}.\n\nWin some of the free games (Mines, Worm, the card games) to earn more, or come back tomorrow for your allowance.`, ['OK'], 'warn');
     return;
   }
-  const r = await msgBox('Confirm purchase', `Buy ${p.label} for ${money(p.price)}?\n\nYou'll have ${money(wallet() - p.price)} left.`, ['Buy it', 'Cancel'], 'info');
+  const r = await msgBox('Confirm purchase', tester() ? `Install ${p.label}? (Tester mode: it's free.)` : `Buy ${p.label} for ${money(p.price)}?\n\nYou'll have ${money(wallet() - p.price)} left.`, ['Buy it', 'Cancel'], 'info');
   if (r !== 'Buy it') return;
-  setWallet(wallet() - p.price);
+  if (!tester()) setWallet(wallet() - p.price);
   store.set('pending', [...new Set([...store.get('pending', []), p.id])]);
   if (wins.store && wins.store.refresh) wins.store.refresh();
   install(p);
@@ -1264,7 +1285,7 @@ function openSettings() {
       <fieldset><legend>Screen saver</legend><div class="ss-row"><select data-sk aria-label="Screen saver"><option value="">(None)</option>${saversFor().map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select><button class="btn" data-sp>Preview</button></div><label class="ss-row">Wait <select data-sw aria-label="Minutes before the screen saver starts">${[1, 2, 3, 5, 10, 15].map(m => `<option value="${m}">${m}</option>`).join('')}</select> minute(s)</label><label class="ss-row" data-smsg>Message <input type="text" maxlength="40" data-st aria-label="Scrolling message text"></label></fieldset>
       <fieldset><legend>Desktop color</legend><div class="sws"></div></fieldset>
       <fieldset><legend>Time machine</legend><button class="btn" data-tw>Travel to another year…</button></fieldset>
-      <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button></div></fieldset>
+      <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button>${tester() ? '<button class="btn" data-tester>Leave tester mode…</button>' : ''}</div></fieldset>
       <div style="text-align:right"><button class="btn" data-ok>OK</button></div></div>`;
     const b = W.body;
     const vol = b.querySelector('[data-vol]'); vol.value = settings.vol;
@@ -1290,6 +1311,13 @@ function openSettings() {
     b.querySelector('[data-tw]').onclick = e => openTW(e.currentTarget);
     b.querySelector('[data-bk]').onclick = openBackup;
     b.querySelector('[data-erase]').onclick = eraseAll;
+    const tb = b.querySelector('[data-tester]');
+    if (tb) tb.onclick = async () => {
+      const r = await msgBox('Leave tester mode', `Your money goes back to ${money(WALLET_START)}, like a new visitor.\n\nKeep the games you installed while testing?`, ['Keep games', 'Remove games', 'Cancel'], 'warn');
+      if (!r || r === 'Cancel') return;
+      leaveTester(r === 'Keep games'); refreshShell(); closeWin(W);
+      toast(`Tester mode off. You have ${money(WALLET_START)}.`);
+    };
     b.querySelector('[data-ok]').onclick = () => closeWin(W);
   }});
 }
@@ -2231,6 +2259,7 @@ function finishDesk() {
   setupTaskbar();
   if (era.shell === 'start') buildStartShell(); else if (era.shell === 'dos') buildDosShell(); else openProgman();
   allowance();
+  if (tester()) setTimeout(() => toast('Tester mode: unlimited money in this browser. Turn it off in Control Panel.'), 1600);
   // A shared home-page link (#1995&page=…) opens straight to that page, already online.
   if (HASH.page && !HASH.opened && era.apps.includes('nv')) {
     HASH.opened = true;
