@@ -478,7 +478,7 @@ const APP_DEFS = {
   cp: () => ({ label: 'Control Panel', icon: 'cp', cat: 'main', open: openSettings }),
   chat: () => ({ label: era.chat.label, icon: 'chat', cat: 'main', open: () => openChat(era.chat) }),
   im: () => ({ label: era.im.label, icon: 'im', cat: 'main', open: () => openChat(era.im) }),
-  jb: () => ({ label: 'Jukebox', icon: 'jb', cat: 'acc', open: () => openJukebox() }),
+  jb: () => ({ label: 'Jukebox', icon: 'jb', cat: 'main', open: () => openJukebox() }),
   store: () => ({ label: 'Software Store', icon: 'shop', cat: 'main', open: () => openStore() }),
   files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() })
 };
