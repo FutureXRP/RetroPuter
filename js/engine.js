@@ -328,7 +328,7 @@ function openWin(o) {
   el.querySelector('.t').textContent = o.title;
   layer.appendChild(el);
   const W = { id: o.id, el, title: o.title, icon: o.icon, body: el.querySelector('.body'), modal: !!o.modal };
-  const L = layer.getBoundingClientRect();
+  const L = { width: layer.clientWidth, height: layer.clientHeight }; // not getBoundingClientRect: the power-on animation scales the screen
   const narrow = L.width < 640;
   const w = Math.min(o.w || 420, L.width - 8), h = Math.min(o.h || 300, L.height - 8);
   let left, top;
@@ -992,7 +992,7 @@ function maybePopup() {
   if (Object.keys(wins).filter(k => k.startsWith('pop')).length >= 2) return;
   setTimeout(() => {
     if (!wins.nv || !net.connected) return;
-    const ad = pick(era.popups), L = layer.getBoundingClientRect();
+    const ad = pick(era.popups), L = { width: layer.clientWidth, height: layer.clientHeight };
     sfx.ding();
     openWin({ id: 'pop' + (++popN), title: ad.title, icon: 'warn', w: 300, h: 210, fixed: true, noMin: true,
       at: [Math.random() * Math.max(10, L.width - 320), Math.random() * Math.max(10, L.height - 240)], build(W) {
