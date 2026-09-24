@@ -488,7 +488,8 @@ const APP_DEFS = {
   im: () => ({ label: era.im.label, icon: 'im', cat: 'main', open: () => openChat(era.im) }),
   jb: () => ({ label: 'Jukebox', icon: 'jb', cat: 'main', open: () => openJukebox() }),
   store: () => ({ label: 'Software Store', icon: 'shop', cat: 'main', open: () => openStore() }),
-  files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() })
+  files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() }),
+  help: () => ({ label: 'Quick Help', icon: 'info', cat: 'main', open: () => openHelp() })
 };
 
 /* Plug-in programs live in js/apps/*.js and register on window.RETRO_APPS.
@@ -507,7 +508,7 @@ const pluginRuns = p => p.kind === 'store' ? (p.year || 1990) <= era.year && isO
 const pluginDef = p => ({ id: p.id, label: p.label, icon: 'app-' + p.id, cat: p.cat || (p.kind === 'store' ? 'game' : 'game'), bought: p.kind === 'store', open: () => launchApp(p.id) });
 // Everything that runs in this year, in display order.
 function apps() {
-  const core = [...era.apps, 'store', 'files'].map(id => Object.assign({ id }, APP_DEFS[id]()));
+  const core = [...era.apps, 'store', 'files', 'help'].map(id => Object.assign({ id }, APP_DEFS[id]()));
   return core.concat(Object.values(PLUGINS).filter(pluginRuns).map(pluginDef));
 }
 const findApp = id => apps().find(a => a.id === id);
@@ -650,7 +651,7 @@ function openProgman() {
       ]},
       { label: 'Options', items: () => [{ label: 'Control Panel', fn: openSettings }, { label: settings.crt ? 'Turn off CRT glow' : 'Turn on CRT glow', fn: toggleCrt }] },
       { label: 'Window', items: () => Object.keys(GROUPS).map(c => ({ label: GROUPS[c], fn: () => openFolder(c) })) },
-      { label: 'Help', items: [{ label: 'Read Me First', fn: () => openNotepad('README.TXT') }, { label: 'About ' + era.os.name, fn: aboutOS }] }
+      { label: 'Help', items: [{ label: 'Quick Help', fn: () => openHelp() }, { label: 'Read Me First', fn: () => openNotepad('README.TXT') }, { label: 'About ' + era.os.name, fn: aboutOS }] }
     ]);
     W.body.innerHTML = '<div class="pm" role="list"></div>';
     const grid = W.body.firstChild;
@@ -665,7 +666,7 @@ function toggleCrt() { settings.crt = !settings.crt; screen.classList.toggle('cr
 /* Start-menu desktop (1995 and later) */
 function buildStartShell() {
   const grid = document.createElement('div'); grid.id = 'deskicons'; grid.setAttribute('role', 'list');
-  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store'];
+  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store', 'help'];
   desk.forEach(id => grid.appendChild(iconButton(findApp(id), grid)));
   grid.appendChild(iconButton({ label: 'Games', icon: 'folder', open: () => openFolder('game') }, grid));
   layer.prepend(grid);
@@ -687,11 +688,12 @@ function buildStartMenu() {
     else { b.onclick = () => { closeStart(); fn(); }; b.onpointerenter = () => closeSub(); }
     items.appendChild(b);
   };
-  add('folder', 'Programs', null, () => apps().filter(a => a.cat !== 'game' && !['cp', 'readme'].includes(a.id)));
+  add('folder', 'Programs', null, () => apps().filter(a => a.cat !== 'game' && !['cp', 'readme', 'help'].includes(a.id)));
   add('mines', 'Games', null, () => groupApps('game').concat([{ label: 'Get more games…', icon: 'shop', open: () => openStore() }]));
   items.appendChild(document.createElement('hr'));
   add('cp', 'Control Panel', openSettings);
-  add('note', 'Help: Read Me First', () => openNotepad('README.TXT'));
+  add('info', 'Quick Help', () => openHelp());
+  add('note', 'Read Me First', () => openNotepad('README.TXT'));
   add('info', 'About ' + era.os.name, aboutOS);
   add('tw', 'Travel to another year…', () => openTW());
   items.appendChild(document.createElement('hr'));
@@ -1277,6 +1279,100 @@ async function eraseAll() {
 }
 
 /* --- settings --- */
+/* ---------- Quick Help: the guide that opens the first time you use each year ---------- */
+// The program list is built from the live app registry, so new apps show up on their own. Each app's one-line
+// description is its `help` field (store games fall back to `tagline`). Core programs are described here.
+// When a year gets a new shell, feature or way to earn money, update the pages in openHelp() too.
+const CORE_HELP = {
+  dial: 'Connects the modem so you can go online. Listen for the screech!',
+  nv: 'Surf the pretend Web of this year: search, news, games, home pages and downloads.',
+  chat: 'Hang out in a chat room with pretend buddies.',
+  im: 'Send instant messages to pretend buddies.',
+  jb: 'Play music, including songs you download from the Web.',
+  readme: 'A longer tour of this computer and what was new in this year.',
+  mines: 'Find the hidden mines without stepping on one. Win to earn money.',
+  worm: 'Steer the worm to the food and don\'t hit a wall. High scores earn money.',
+  paint: 'Draw pictures with brushes, shapes and a paint bucket.',
+  np: 'Type notes. Save them and they\'ll still be here next time.',
+  cp: 'Sound, screen color, screen savers, backups and the Time Machine.',
+  store: 'Buy new games with your play money.',
+  files: 'Look around the hard disk, including files you download.',
+  help: 'This guide.'
+};
+const helpLine = a => { const p = PLUGINS[a.id]; return (p && (p.help || p.tagline)) || CORE_HELP[a.id] || ''; };
+function openHelp(page) {
+  const Y = era.year, S = storeInfo(), dos = era.shell === 'dos', start = era.shell === 'start';
+  const tap = 'Double-click (or tap once on a phone or tablet)';
+  const has = id => !!findApp(id);
+  const li = items => '<ul>' + items.filter(Boolean).map(t => `<li>${t}</li>`).join('') + '</ul>';
+  const listApps = (title, list) => list.length ? `<h4>${esc(title)}</h4><dl>${list.map(a => `<dt>${ICONS[a.icon] || ''}<b>${esc(a.label)}</b>${dos ? ` <code>${esc(dosCmd(a))}</code>` : ''}</dt><dd>${esc(helpLine(a))}</dd>`).join('')}</dl>` : '';
+  const pages = () => {
+    const all = apps(), mine = all.filter(a => !['help', 'readme'].includes(a.id));
+    const forSale = Object.values(PLUGINS).filter(p => p.kind === 'store' && p.year <= Y && !isOwned(p.id));
+    const later = Object.values(PLUGINS).filter(p => p.kind === 'store' && p.year > Y).length;
+    const out = [];
+    out.push({ t: `Welcome to ${Y}!`, h: `<p class="qh-big">You're sitting at a computer from <b>${Y}</b> running <b>${esc(era.os.name)}</b>. Everything here is pretend, so explore all you like. You can't break it.</p>
+      <p>${esc(era.power)}</p>
+      <h4>What you're looking at</h4>` + (dos
+        ? li(['A black screen with a blinking <code>C:\\&gt;</code> prompt. That\'s the whole computer: no mouse, no pictures.', 'You <b>type a command and press Enter</b>. Type <code>HELP</code> to see them all.', 'The bar at the bottom has buttons for people who\'d rather not type: <b>HELP</b>, <b>PROGRAMS</b>, <b>FILES</b>, <b>TIME MACHINE</b> and <b>OFF</b>.'])
+        : start
+          ? li(['<b>Icons</b> on the desktop open programs.', 'The <b>Start</b> button (bottom left) has every program, Games, Control Panel and Shut Down.', 'The <b>taskbar</b> along the bottom shows your open windows. Click one to bring it back.', `The <b>${Y}</b> button and the clock sit at the bottom right. The ${Y} button is the Time Machine.`])
+          : li(['<b>Program Manager</b> is the big window. Its icons open programs.', 'The <b>Accessories</b> and <b>Games</b> icons open groups with more programs inside.', 'The bar along the bottom shows your open windows, the <b>' + Y + '</b> button (the Time Machine), the clock and <b>Shut Down</b>.']))
+    });
+    out.push({ t: 'Getting around', h: (dos
+      ? `<h4>Typing commands</h4>` + li(['<code>DIR</code> lists files. <code>CD GAMES</code> goes into the GAMES folder, <code>CD \\</code> goes back.', 'Run a program by typing its name, like <code>CALC</code>, then Enter. The next page lists every name.', '<code>MENU</code> (or the PROGRAMS button, or F2) shows a menu you can tap or use with the arrow keys.', '<code>CATALOG</code> opens the software catalog, <code>CONTROL</code> the settings, <code>GUIDE</code> this guide.', 'Press <b>Esc</b> to close a program. The up arrow repeats your last command.'])
+      : `<h4>Programs and windows</h4>` + li([`${tap} an icon to open a program.`, start ? 'Or click <b>Start</b>, then <b>Programs</b> or <b>Games</b>.' : 'Open <b>Games</b> or <b>Accessories</b> in Program Manager to find more programs.', 'Drag a window by its title bar to move it. Drag the bottom-right corner to resize it.', 'In the top-right of each window: <b>_</b> hides it on the taskbar, <b>□</b> makes it full size, <b>×</b> closes it.', 'Menus along the top of a window (like <b>Game</b> or <b>File</b>) have New game, How to play and more.']))
+      + `<h4>Time travel</h4>` + li([`${dos ? 'Type <code>1990</code>, <code>1995</code> or <code>2000</code>, or tap <b>TIME MACHINE</b>' : `Click the <b>${Y}</b> button on the taskbar`} to visit another year. The computer restarts there.`, 'Your money, games, notes and high scores come with you.', 'You can also pick a year on the desk before you press Power.'])
+      + `<h4>Turning off</h4>` + li([`${dos ? 'Type <code>OFF</code>' : start ? 'Choose <b>Start, Shut Down</b>' : 'Click <b>Shut Down</b>'} to turn the computer off. Everything is saved.`, 'Tired of waiting at startup? The <b>Skip the startup</b> button jumps straight to the desktop.'])
+    });
+    out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
+      <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`])
+      + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
+      + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To move your stuff to another computer or browser: <b>Control Panel, Backup &amp; restore</b>.'])
+    });
+    const free = mine.filter(a => !(PLUGINS[a.id] && PLUGINS[a.id].kind === 'store'));
+    const bought = mine.filter(a => PLUGINS[a.id] && PLUGINS[a.id].kind === 'store');
+    out.push({ t: 'What this computer can do', h: `<p>Everything below really works. ${dos ? 'Type the name in the box to run it.' : 'Open any of them from the desktop, ' + (start ? 'the Start menu' : 'Program Manager') + ' or the Games folder.'}</p>`
+      + listApps('Main programs', free.filter(a => a.cat === 'main'))
+      + listApps('Accessories', free.filter(a => a.cat === 'acc'))
+      + listApps('Games and learning (free)', free.filter(a => a.cat === 'game'))
+      + listApps('Games you bought', bought)
+      + (forSale.length ? `<h4>For sale in the ${esc(S.name)}</h4><dl>${forSale.sort((a, b) => a.price - b.price).map(p => `<dt>${p.icon || ''}<b>${esc(p.label)}</b> ${money(p.price)}</dt><dd>${esc(p.help || p.tagline || '')}</dd>`).join('')}</dl>` : '')
+      + (later ? `<p><i>${later} more game${later > 1 ? 's' : ''} come out in later years. Use the Time Machine to shop for them.</i></p>` : '')
+    });
+    const net = [];
+    if (has('dial')) net.push(`<b>Get online:</b> ${dos ? 'run' : 'open'} <b>${esc(findApp('dial').label)}</b> and click Connect. The modem screeches, then you're online at ${esc(era.speedBlurb.replace(/^Modem: /, ''))}. The faster the year, the faster the Web.`);
+    if (has('nv')) net.push(`<b>Surf the Web:</b> open <b>${esc(era.browser.name)}</b>. The Web is pretend but full of pages to explore, search and download from.`);
+    if (has('pagebuilder')) net.push('<b>Make your own home page</b> with Home Page Builder and share a link to it.');
+    if (has('chat') || has('im')) net.push(`<b>${esc((findApp('chat') || findApp('im')).label)}:</b> chat with buddies. They're friendly computer characters, not real people. Never type your real name, address or phone number. (It gets blocked anyway.)`);
+    if (has('terminal')) net.push('<b>Terminal</b> dials bulletin board systems (BBSes): other people\'s computers you call on the phone to read messages, play games and swap files. The Web hasn\'t been invented yet!');
+    if (has('jb')) net.push('<b>Jukebox</b> plays songs, including ones you download from the Web.');
+    if (net.length) out.push({ t: dos ? 'Calling other computers' : 'Going online', h: li(net) });
+    out.push({ t: 'Have fun!', h: `<p class="qh-big">That's it. Go explore ${Y}!</p>` + li([`Open this guide again any time: ${dos ? 'type <code>GUIDE</code> or pick it in the MENU' : start ? 'Start, Quick Help, or the Quick Help icon' : 'the Quick Help icon, or Help, Quick Help in Program Manager'}.`, 'For more history and tips, read <b>Read Me First</b>' + (dos ? ' (<code>TYPE README.TXT</code>)' : '') + '.', 'Each year has its own guide, and it opens the first time you visit.']) });
+    return out;
+  };
+  const W = openWin({ id: 'help', title: 'Quick Help', icon: 'info', w: 560, h: 440, center: true, build(W) {
+    let i = page || 0;
+    W.body.innerHTML = `<div class="qh"><div class="qh-page" tabindex="0"></div><div class="qh-nav"><button class="btn" data-b>&lt; Back</button><span class="qh-dots"></span><button class="btn" data-n>Next &gt;</button><button class="btn" data-x>Done</button></div></div>`;
+    const pg = W.body.querySelector('.qh-page'), dots = W.body.querySelector('.qh-dots');
+    W.show = n => {
+      const P = pages(); i = Math.max(0, Math.min(P.length - 1, n));
+      pg.innerHTML = `<h3>${esc(P[i].t)}</h3>${P[i].h}`; pg.scrollTop = 0;
+      dots.textContent = `${i + 1} of ${P.length}`;
+      W.body.querySelector('[data-b]').disabled = i === 0;
+      W.body.querySelector('[data-n]').hidden = i === P.length - 1;
+    };
+    W.body.querySelector('[data-b]').onclick = () => { sfx.click(); W.show(i - 1); };
+    W.body.querySelector('[data-n]').onclick = () => { sfx.click(); W.show(i + 1); };
+    W.body.querySelector('[data-x]').onclick = () => closeWin(W);
+    W.onKey = e => { if (e.key === 'ArrowRight' || e.key === 'PageDown') W.show(i + 1); else if (e.key === 'ArrowLeft' || e.key === 'PageUp') W.show(i - 1); };
+    W.refresh = () => W.show(i);
+    W.show(i);
+  }});
+  if (page != null && W.show) W.show(page);
+  return W;
+}
+
 function openSettings() {
   openWin({ id: 'cp', title: 'Control Panel', icon: 'cp', w: 360, fixed: true, autoH: true, build(W) {
     W.body.innerHTML = `<div class="cp">
@@ -1936,7 +2032,7 @@ const DOS_FIXED = {
 };
 let dos = null;
 function dosTree() {
-  const run = apps().filter(a => a.id !== 'readme' && a.id !== 'files');
+  const run = apps().filter(a => !['readme', 'files', 'help'].includes(a.id));
   const games = run.filter(a => a.cat === 'game'), progs = run.filter(a => a.cat !== 'game');
   const docs = { 'README.TXT': era.files['README.TXT'], 'MYNOTES.TXT': store.get('mynotes', '') };
   Object.keys(era.files).forEach(f => { if (f !== 'README.TXT' && estore.get('got:' + f, false)) docs[f] = era.files[f]; });
@@ -1956,7 +2052,7 @@ function buildDosShell() {
   const phos = () => (era.walls.find(w => w[0] === eraCfg().wall) || era.walls[0])[1];
   el.style.setProperty('--phos', phos());
   dosPrompt();
-  dosPrint('Horizon DOS Version 2.11\n\nNew here? Type HELP and press Enter, or tap PROGRAMS below for a menu.\nTo visit another year, type 1990, 1995 or 2000, or tap TIME MACHINE.\n');
+  dosPrint('Horizon DOS Version 2.11\n\nNew here? Type GUIDE for a quick tour, HELP for commands, or tap PROGRAMS below for a menu.\nTo visit another year, type 1990, 1995 or 2000, or tap TIME MACHINE.\n');
   el.querySelector('.dos-bar').addEventListener('click', e => {
     const b = e.target.closest('[data-k]'); if (!b) return; sfx.key();
     ({ help: () => dosRun('HELP'), menu: dosMenu, dir: () => dosRun('DIR'), tm: () => openTW(el.querySelector('.dos-tm')), off: askShutdown })[b.dataset.k]();
@@ -1998,6 +2094,7 @@ function dosRun(line) {
   TYPE file    show a text file      CLS         clear the screen
   MENU         program menu          CATALOG     the mail-order software catalog
   EDIT         write notes           CONTROL     settings (sound, screen color)
+  GUIDE        the quick help guide: how everything works, money, programs
   COLOR        change screen color   VER, DATE, TIME, MEM   system info
   1990  1995  2000   travel to another year          OFF    turn off
 Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES)[0] ? Object.keys(T.GAMES)[0].replace('.EXE', '') : 'CALC'}.`),
@@ -2033,6 +2130,7 @@ Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES
     EDIT: () => openNotepad('MYNOTES.TXT'),
     MENU: () => dosMenu(),
     CATALOG: () => openStore(),
+    GUIDE: () => openHelp(),
     CONTROL: () => openSettings(),
     COLOR: () => { const i = era.walls.findIndex(w => w[0] === eraCfg().wall); eraCfg().wall = era.walls[(i + 1) % era.walls.length][0]; saveSettings(); dos.el.style.setProperty('--phos', era.walls[(i + 1) % era.walls.length][1]); },
     OFF: () => askShutdown(), SHUTDOWN: () => askShutdown(), EXIT: () => askShutdown(),
@@ -2053,7 +2151,8 @@ Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES
 }
 function dosMenu() {
   const items = [
-    ...apps().filter(a => !['files', 'readme', 'cp', 'store'].includes(a.id)).map(a => ({ label: a.label, hint: dosCmd(a), fn: a.open })),
+    ...apps().filter(a => !['files', 'readme', 'cp', 'store', 'help'].includes(a.id)).map(a => ({ label: a.label, hint: dosCmd(a), fn: a.open })),
+    { label: 'Quick Help guide', hint: 'GUIDE', fn: () => openHelp() },
     { label: 'Read Me', hint: 'TYPE README.TXT', fn: () => openNotepad('README.TXT') },
     { label: 'Software Catalog', hint: 'CATALOG', fn: () => openStore() },
     { label: 'Control Panel', hint: 'CONTROL', fn: openSettings },
@@ -2345,7 +2444,8 @@ function finishDesk() {
   }
   const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
   if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
-  if (!estore.get('seenReadme', false) && era.shell !== 'dos') { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
+  // First visit to this year: the Quick Help guide (it replaces the old automatic Read Me).
+  if (!estore.get('seenHelp', false)) { estore.set('seenHelp', true); estore.set('seenReadme', true); setTimeout(() => { if (booted) openHelp(); }, 600); }
 }
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };
@@ -2385,6 +2485,8 @@ $('#relight').onclick = async () => {
 window.addEventListener('resize', () => { Object.values(wins).forEach(W => { if (W.max) W.onResize && W.onResize(); }); });
 
 /* ---------- dev hook: add ?dev to the URL to script the computer in tests ---------- */
+// Reminder for app authors: every app needs a line in the Quick Help guide (a `help` field, or `tagline` for store games).
+if (/[?&]dev\b/.test(location.search)) Object.values(PLUGINS).filter(p => !p.help && !p.tagline).forEach(p => console.warn(`Quick Help: app "${p.id}" has no help text. Add a help: '...' line.`));
 if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
   launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
   own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,

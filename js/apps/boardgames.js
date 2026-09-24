@@ -93,7 +93,7 @@
   }
 
   APPS.push({
-    id: 'reversi',
+    id: 'reversi', help: 'Flip your opponent\'s pieces to your color. Win to earn money.',
     label: 'Reversi',
     kind: 'builtin',
     eras: ['1990', '1995'],
@@ -389,7 +389,7 @@
   const CROWN = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" fill="#ffd700" stroke="#000" stroke-width="1"/></svg>';
 
   APPS.push({
-    id: 'checkers',
+    id: 'checkers', help: 'Play checkers against a computer opponent. Win to earn money.',
     label: 'Online Checkers',
     kind: 'builtin',
     eras: ['2000'],

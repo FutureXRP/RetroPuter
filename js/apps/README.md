@@ -15,6 +15,7 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 |---|---|
 | `id` | Unique, lowercase letters/numbers. Also the storage namespace. |
 | `label` | Name on the desktop, in menus and on the title bar. |
+| `help` | **Required.** One plain sentence for the Quick Help guide's "What this computer can do" page, e.g. `'Flip your opponent\'s pieces to your color. Win to earn money.'` Store games fall back to `tagline`, but a `help` line is better. With `?dev` in the URL, the console warns about any app without one. |
 | `kind` | `'builtin'` (free, ships with the OS) or `'store'` (bought in the Software Store). |
 | `eras` | Builtin only: which years include it, e.g. `['1985', '1995', '2000']`. In `'1985'` there is no windowed desktop: windows fill the screen and should look like an 80-column text-mode program (check `api.era.id === '1985'`). |
 | `year` | Store only: release year (1985, 1990, 1995 or 2000). It's sold and runs in that year and every later year. |
@@ -52,6 +53,10 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 - Helpers: `api.esc`, `api.sleep`, `api.pick`, `api.$`, `api.$$`.
 
 Shared CSS classes you can use: `btn`, `raised`, `sunken`.
+
+## Quick Help guide
+
+Every year opens a Quick Help guide the first time it's used (`openHelp()` in `js/engine.js`). Its program list is built from the app registry, so a new app appears automatically with its `help` line. If an app adds a new way to earn or spend money, a new shell feature or a new way to get online, update the matching page in `openHelp()` as well.
 
 ## Testing
 

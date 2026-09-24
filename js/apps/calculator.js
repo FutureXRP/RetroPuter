@@ -1,6 +1,6 @@
 /* Calculator: a built-in accessory in every year. Also the reference example for js/apps/README.md. */
 (window.RETRO_APPS = window.RETRO_APPS || []).push({
-  id: 'calc',
+  id: 'calc', help: 'A calculator for everyday math.',
   label: 'Calculator',
   kind: 'builtin',
   eras: ['1985', '1990', '1995', '2000'],

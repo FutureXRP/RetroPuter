@@ -394,7 +394,7 @@
   const bgSvg = s => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
 
   (window.RETRO_APPS = window.RETRO_APPS || []).push({
-    id: ID,
+    id: ID, help: 'Build your own retro home page and share a link to it.',
     label: 'Home Page Builder',
     kind: 'builtin',
     eras: ['1995', '2000'],
