@@ -187,56 +187,56 @@ const TOPIC_Q = { music: 'heard any good songs lately?', games: 'played any good
 
 /* ---------- personas ---------- */
 const PERSONAS = {
-  SkaterGrl95: { era: '1995', call: 'skatergrl skatergirl skater', v: { c: 'lower', u: .5, ex: .5, emo: [':)', ':-)', ':D'], ep: .35, pre: ['omg ', 'like, ', 'totally, '], pp: .1, typo: .08, cps: 9, apos: .5 },
+  SkaterGrl95: { facts: {"band": "i'm not in a band, but my friends and i air-guitar at the mall. does that count?", "pet": "a cat named Mulder! yes, like the x-files", "school": "10th grade at the high school. my locker is the best decorated one", "family": "a little brother who picks up the phone and breaks my modem connection", "site": "no home page yet! kevin keeps saying he'll help me make one", "car": "no car, i'm 15! i have a skateboard though", "computer": "it's the family computer. it lives in the kitchen", "score": "i beat kevin at air hockey once. he doesn't talk about it", "instrument": "i played recorder in 4th grade. never again"}, era: '1995', call: 'skatergrl skatergirl skater', v: { c: 'lower', u: .5, ex: .5, emo: [':)', ':-)', ':D'], ep: .35, pre: ['omg ', 'like, ', 'totally, '], pp: .1, typo: .08, cps: 9, apos: .5 },
     bio: { age: ["i'm 15! sophomore at the high school", '15. old enough to skate, too young to drive. ugh'], where: ['ohio! small town, one mall, zero skate parks'], job: ["i'm in 10th grade. i skate, i watch way too much tv, and i sell pretzels at the mall on saturdays"], who: ["i'm skatergrl95! i skate, i love grunge and i never miss the x-files"] },
     fav: { color: 'purple', food: 'pizza bagels', animal: 'dolphins', game: 'air hockey at the mall arcade', sport: 'skateboarding, duh', song: 'anything grunge', band: 'anything grunge', show: 'the x-files', movie: 'clueless', book: 'my diary lol', subject: 'art' },
     likes: 'skate skating skateboard board grunge music tv mall pizza dolphins art', hates: 'homework math algebra', topics: 'skate music tv school',
     says: { skate: ['i almost landed a kickflip today!! almost', 'my board has stickers from every band i like', 'mall security yelled at us for skating again lol'], music: ['grunge forever', 'i taped a song off the radio but the dj talked over the start. classic', 'i wear flannel even in summer. its a commitment'], tv: ['who else watches the x-files? the truth is out there', 'i set the vcr to tape my show and it taped the news instead. ugh'], school: ['my locker is covered in magazine pictures', 'we have a pop quiz tomorrow. how is it a pop quiz if they tell us'] },
     doing: ['my mom needs the phone in 10 minutes', 'eating pizza bagels at the computer. dont tell my mom', 'painting my nails while i type. its hard', 'my little brother keeps picking up the phone and it makes the modem scream'],
     real: ["lol ok busted, i'm a computer character in RetroPuter! but my love of skating is 100% real", "i'm a pretend chat buddy who lives in RetroPuter. still totally rad tho"], laugh: ['lol', 'hahaha', 'LOL!!'] },
-  DoomDude: { era: '1995', call: 'doom doomdude', v: { c: 'mixed', u: .5, ex: .6, emo: [':)'], ep: .1, pre: ['ROFL ', 'sweet, ', 'dude '], pp: .15, typo: .1, cps: 11, apos: .5, shout: .15 },
+  DoomDude: { facts: {"band": "no band. i make music in a tracker program though. it's all beeps", "pet": "a hamster named Turbo. he runs faster than my modem", "school": "8th grade. computer lab is the best class", "family": "an older brother who hogs the computer", "site": "no home page yet. i'm saving up disk space lol", "car": "i'm 14 lol. i have a bike", "computer": "a 486 with 8 megs of ram and a 28.8 modem. it's a beast", "score": "i beat level 3. nobody else in my class has", "instrument": "does a keyboard count? the computer kind"}, era: '1995', call: 'doom doomdude', v: { c: 'mixed', u: .5, ex: .6, emo: [':)'], ep: .1, pre: ['ROFL ', 'sweet, ', 'dude '], pp: .15, typo: .1, cps: 11, apos: .5, shout: .15 },
     bio: { age: ['14. old enough to beat level 3'], where: ['illinois. its flat. good for running long phone cords'], job: ["i'm in 8th grade. mostly i play games and trade shareware on floppies"], who: ['DoomDude. gamer. level 3 champion. proud owner of a 28.8 modem'] },
     fav: { color: 'green, like my monitor', food: 'pizza rolls', game: 'anything with a secret level', sport: 'games are a sport', animal: 'dragons (they count)', song: 'video game music', show: 'saturday morning cartoons', movie: 'jurassic park', book: 'game strategy guides', subject: 'computer lab' },
     likes: 'game games level levels shareware floppy modem computer pizza cheat codes arcade', hates: 'homework busy signal', topics: 'games computers',
     says: { games: ['just beat level 3!!!', "i found a secret level. i'm not telling where (its behind the wall)", 'anyone want to trade shareware?', 'i beat mines on expert. ok, beginner. ok i lost'], computers: ['my modem is 28.8 now. SO FAST', 'my dad got a CD-ROM with an entire encyclopedia on it', 'my computer has 8 megs of ram. its a beast'] },
     doing: ['my mom says 5 more minutes then homework', 'brb my brother needs the phone', 'eating pizza rolls. burned my mouth. worth it'],
     real: ["ROFL busted. i'm a computer character in RetroPuter. but my high scores are legit"], laugh: ['ROFL', 'LOL', 'haha!!'] },
-  CyberKev: { era: '1995', call: 'kev kevin cyberkev', same: 'KevRocks22', v: { c: 'lower', u: .8, ex: .2, emo: [':)', ';)'], ep: .12, pre: ['dude ', 'dude, ', 'man '], pp: .22, typo: .1, cps: 10, apos: 1 },
-    bio: { age: ["i'm 17. senior next year, which is basically being an adult"], where: ['nebraska. PrairieNet country lol'], job: ["i'm in high school. i play guitar in The Dial Tones and i make web pages. i learned tables!!"], who: ["i'm kevin! i run kevin's kool kyber korner on CyberBurbs. sign my guestbook"] },
+  CyberKev: { facts: {"band": "The Dial Tones! i play guitar. we're playing the school dance friday", "pet": "my dog Pixel! he's 7 now. he's been on my home page since 1990 lol", "school": "i'm a senior at Prairie High", "family": "a little sister who always needs the phone. and my grandma jo, who just got email", "site": "kevin's kool kyber korner on CyberBurbs! now with tables", "car": "i share my mom's minivan. it is not cool. i am cool IN it though", "computer": "a pentium! ok, it's my dad's. i'm borrowing it indefinitely", "score": "12,880 in worm. i will wait", "instrument": "guitar! i know 4 chords, and they're good chords"}, era: '1995', call: 'kev kevin cyberkev', same: 'KevRocks22', v: { c: 'lower', u: .8, ex: .2, emo: [':)', ';)'], ep: .12, pre: ['dude ', 'dude, ', 'man '], pp: .22, typo: .1, cps: 10, apos: 1 },
+    bio: { age: ["i'm 17! senior at Prairie High, which is basically being an adult"], where: ['nebraska. PrairieNet country lol'], job: ["i'm in high school. i play guitar in The Dial Tones and i make web pages. i learned tables!!"], who: ["i'm kevin! i run kevin's kool kyber korner on CyberBurbs. sign my guestbook"] },
     fav: { color: 'black, like my web page background', food: 'tater tots', game: 'worm. i have the high score', animal: 'the FishCam fish', sport: 'does worm count', song: 'anything by The Dial Tones (my band)', band: 'The Dial Tones obviously', show: 'the x-files', movie: 'hackers', book: 'my html book', subject: 'computer lab' },
     likes: 'html web page homepage guitar band music worm game computer internet modem fishcam tater', hates: 'gym busy signal', topics: 'computers music games',
-    says: { computers: ['i learned tables in html. i am unstoppable', 'my page has a counter. 43 visitors. 40 were me', 'i made my text blink. my mom says it gives her a headache', 'my old page from 1990 was so embarrassing lol'], music: ['The Dial Tones are playing the school dance friday!!', 'we practice in my garage. the neighbors have opinions', 'i only know 4 chords but they are good chords'], games: ['my worm high score is 3000. i will wait', 'worm is the greatest game ever made. fight me (in worm)'] },
+    says: { computers: ['i learned tables in html. i am unstoppable', 'my page has a counter. 43 visitors. 40 were me', 'i made my text blink. my mom says it gives her a headache', 'my old page from 1990 was so embarrassing lol'], music: ['The Dial Tones are playing the school dance friday!!', 'we practice in my garage. the neighbors have opinions', 'i only know 4 chords but they are good chords'], games: ['my worm high score is 12,880. i will wait', 'worm is the greatest game ever made. fight me (in worm)'] },
     doing: ['brb my sister needs the phone', 'my mom keeps picking up the phone and kicking me offline', 'updating my home page. adding MORE flame gifs', 'eating tater tots and coding html'],
     real: ["lol ya i'm a computer character in RetroPuter. but my worm high score is REAL", "i'm a pretend chat buddy. RetroPuter made me. i still rock tho"], laugh: ['lol', 'haha', 'lol nice'] },
-  MomOf3: { era: '1995', call: 'mom momof3', confused: 1, v: { c: 'proper', u: 0, ex: 0, emo: [':-)'], ep: .1, pre: ['Oh! ', 'Well, '], pp: .12, typo: .03, cps: 5, apos: 0, rep: [[/\blol\b/gi, 'ha ha'], [/\bomg\b/gi, 'oh my'], [/\bdude\b/gi, 'dear'], [/\bur\b/g, 'your'], [/\bidk\b/gi, "I don't know"]] },
+  MomOf3: { facts: {"band": "Oh, no band for me! I sing in the church choir, though.", "pet": "Our dog, Pickles. He eats socks.", "school": "I finished school a long time ago! Now I help with three sets of homework.", "family": "Three kids, and a husband who also needs the phone line.", "site": "A home page? Oh my. My son says he will make me one.", "car": "A station wagon with wood paneling. It has seen things.", "computer": "My son set it up. It hums.", "score": "I won the church bake sale ribbon. Does that count?", "instrument": "I play a little piano, mostly at Christmas."}, era: '1995', call: 'mom momof3', confused: 1, v: { c: 'proper', u: 0, ex: 0, emo: [':-)'], ep: .1, pre: ['Oh! ', 'Well, '], pp: .12, typo: .03, cps: 5, apos: 0, rep: [[/\blol\b/gi, 'ha ha'], [/\bomg\b/gi, 'oh my'], [/\bdude\b/gi, 'dear'], [/\bur\b/g, 'your'], [/\bidk\b/gi, "I don't know"]] },
     bio: { age: ["Oh, a lady never tells! Let's just say I remember when TV was black and white."], where: ['We live in Iowa. Lots of corn and very friendly people.'], job: ['I am a mom of three! I also do the books for our church bake sale. My son set up this computer for me.'], who: ["I'm a mom of three who just discovered the Internet. I'm still looking for the recipe room!"] },
     fav: { color: 'blue, like my kitchen curtains', food: 'my famous tuna casserole', game: 'Scrabble', animal: 'our dog, Pickles', sport: 'watching my kids play soccer', song: 'anything I can hum along to', show: 'the evening news', book: 'a good cookbook', movie: 'The Sound of Music', subject: 'home economics' },
     likes: 'recipe recipes cooking baking kids family garden soccer scrabble church casserole', hates: 'caps lock mess', topics: 'food family school',
     says: { food: ['Is this the recipe room? I have a lovely casserole recipe.', 'I made meatloaf tonight. The kids pretended to like it.'], family: ['My youngest asked me what a floppy disk is. I said, a disk that is floppy.', 'My son set this up for me.'], school: ['Do your homework before you chat, dear!'], computers: ['How do I make the letters bigger?', 'Does anyone know how to turn off the caps lock?'] },
     doing: ['I have a casserole in the oven, so I will be quick.', 'My husband needs the phone line soon.', 'One of the kids is asking for a snack. Be right back.'],
     real: ['Well, I am a computer character in RetroPuter, dear. But my casserole advice is very real.'], laugh: ['Ha ha! That is a good one.', 'Oh, you are funny!'] },
-  KevRocks22: { era: '2000', call: 'kev kevin kevrocks', same: 'CyberKev', v: { c: 'lower', u: .7, ex: .3, emo: [':)', ':-D'], ep: .15, pre: ['dude ', 'dude, '], pp: .2, typo: .08, cps: 12, apos: 1 },
+  KevRocks22: { facts: {"band": "The Dial Tones broke up. creative differences (we disagreed about whether to practice)", "job": "i'm the CEO of PixelPets.com! 40 employees, 14 customers. 3 of them are my grandma", "pet": "my dog Pixel! he's 12 now and he's basically our office mascot", "school": "i graduated from Prairie High in 96. now i go to meetings instead lol", "family": "my grandma jo just learned email. she signs every single message", "site": "pixelpets.com! my old kyber korner page is still up too. please don't look at it", "car": "a company car! it's a scooter", "computer": "a brand new laptop and DSL at the office", "score": "i still hold the worm record. 12,880. never forget", "instrument": "i still have my guitar. it lives in the foosball room"}, era: '2000', call: 'kev kevin kevrocks', same: 'CyberKev', v: { c: 'lower', u: .7, ex: .3, emo: [':)', ':-D'], ep: .15, pre: ['dude ', 'dude, '], pp: .2, typo: .08, cps: 12, apos: 1 },
     bio: { age: ['22! old enough to be a CEO apparently lol'], where: ['still nebraska! pixelpets HQ is in an old warehouse with beanbags'], job: ["i'm the CEO of PixelPets.com! we make pets that live on your computer. 40 employees, 14 customers", 'i run a dot-com. mostly i play foosball and say "synergy"'], who: ["it's kevin! dot-com CEO, former worm champion, former Dial Tones guitarist"] },
     fav: { color: 'pixelpets purple', food: 'free office pizza', game: 'foosball', animal: 'pixelpets obviously', sport: 'foosball. it counts', song: 'the kyber korner remix by dj kev (me)', show: 'anything i taped on the vcr', movie: 'the matrix', book: 'how to run a business (i am on page 3)', subject: 'computer lab forever' },
     likes: 'pixelpets pixelpet dot com internet computer foosball business pizza music mp3 worm dsl', hates: 'meetings y2k', topics: 'computers pets business music',
     says: { business: ['we just hired our 40th employee. we have 0 customers lol', 'our business plan: 1. pixelpets 2. ??? 3. profit', 'we have a foosball table in the office. thats basically a business plan', 'our stock went up 42% today!! i do not know why'], computers: ['y2k was so boring. my vcr still blinks 12:00', 'we got DSL at the office. pages load before i click them'], pets: ['did you adopt a pixelpet yet? grandma has one named biscuit', 'pixelpets never need walks. huge selling point'], music: ['the dial tones broke up. creative differences (about practicing)', 'my jukebox has like 300 songs'] },
     doing: ['brb, meeting about our super bowl ad', 'our DSL is so fast today', 'eating free pizza at the office. perks!', 'grandma just emailed me in all caps again lol', 'the investors are here. act busy'],
     real: ["busted lol. i'm a computer character in RetroPuter. but my foosball skills are 100% real"], laugh: ['lol', 'LOL', 'haha nice'] },
-  DanaBanana: { era: '2000', call: 'dana danabanana', v: { c: 'lower', u: .6, ex: .5, emo: [':)', ':D', ';)'], ep: .3, pre: ['omg ', 'ok so ', 'haha '], pp: .15, typo: .06, cps: 11, apos: .7, stretch: .25 },
+  DanaBanana: { facts: {"band": "no band, but i make the best mix cds in chicago", "pet": "no pets, my apartment says no. i might adopt a pixelpet though", "school": "i'm done with school! i work at the bookstore now", "family": "my sister, who is ALWAYS on the phone", "site": "my weblog, dear weblog! and my old unexplained files page from 95", "car": "i take the train! chicago style", "computer": "i use the library computers. 30 minute limit. it's a whole thing", "score": "18 songs on one mix cd. that's my high score", "instrument": "i play the cd player. expertly"}, era: '2000', call: 'dana danabanana', v: { c: 'lower', u: .6, ex: .5, emo: [':)', ':D', ';)'], ep: .3, pre: ['omg ', 'ok so ', 'haha '], pp: .15, typo: .06, cps: 11, apos: .7, stretch: .25 },
     bio: { age: ['22! same as kevin. we go way back'], where: ['chicago! it is SO windy. my hair has given up'], job: ['i work at a bookstore and i write a weblog called dear weblog. also i make mix cds. not professionally'], who: ["i'm dana! kevin's friend since forever. i made an Unexplained Files fan page back in 95 lol"] },
     fav: { color: 'yellow, like a banana. obviously', food: 'banana splits', animal: 'otters', game: 'snake on my cell phone', song: 'track 7 on my newest mix cd', show: 'the unexplained files, forever', movie: 'anything with aliens', book: 'anything from the bookstore, i get a discount', subject: 'english' },
     likes: 'music mix cd mp3 song books library weblog blog unexplained ufo aliens mystery otter banana chicago', hates: 'slow computers busy signal', topics: 'music books tv',
     says: { music: ['i burned a mix cd, 18 songs!!', 'did you download that song yet', 'my away message is a song lyric. very deep'], books: ['the library has a 30 minute computer limit. the man behind me is breathing impatiently', 'i read 3 books this week. one was about ufos. for research'], tv: ['i still watch the unexplained files. the theme song lives in my head'] },
     doing: ['my sister is on the phone so i am at the library lol', 'updating my away message. its a whole art form', 'burning a mix cd right now. 18 songs!!', 'the library computer is SO slow today'],
     real: ["haha ok yes, i'm a computer character in RetroPuter! but my mix cds are real in my heart"], laugh: ['hahaha', 'lol', 'omg lol'] },
-  xXSk8terXx: { era: '2000', call: 'sk8ter sk8 xxsk8terxx', v: { c: 'lower', u: .9, ex: 0, emo: [], ep: 0, pre: ['dude ', 'yo '], pp: .15, typo: .15, cps: 14, apos: 1, nopunct: 1, short: .4 },
+  xXSk8terXx: { facts: {"band": "me and my friends are starting a punk band. we have a name but no instruments", "pet": "a lizard named Grind", "school": "11th grade. barely", "family": "a little bro who unplugs the playstation", "site": "no site. too busy sk8ing", "car": "no car. i sk8 everywhere", "computer": "56k modem. connects at 44000. robbed", "score": "12 kickflips in a row once. no one saw it", "instrument": "none. yet"}, era: '2000', call: 'sk8ter sk8 xxsk8terxx', v: { c: 'lower', u: .9, ex: 0, emo: [], ep: 0, pre: ['dude ', 'yo '], pp: .15, typo: .15, cps: 14, apos: 1, nopunct: 1, short: .4 },
     bio: { age: ['16'], where: ['the suburbs. skatepark is 20 min by bike'], job: ['high school. sk8ing. thats it'], who: ['xXSk8terXx. i sk8. the Xs make it cooler'] },
     fav: { color: 'black', food: 'nachos', game: 'skate games on the playstation', sport: 'sk8ing duh', song: 'punk stuff', animal: 'sharks', show: 'cartoons', movie: 'anything with car chases' },
     likes: 'skate sk8 skating board punk music mp3 playstation games nachos dsl', hates: 'homework rain', topics: 'skate games music',
     says: { skate: ['landed a kickflip today', 'my deck is so beat up', 'skatepark was packed'], games: ['beat the skate game on playstation. again', 'my little bro keeps unplugging the playstation'], music: ['wanna trade mp3s', 'burning a punk mix'], computers: ['my 56k connected at 44000 today. robbed', 'who has DSL. so jealous'] },
     doing: ['my mom needs the phone', 'eating nachos', 'waiting for a song to download. 2 hours left lol'],
     real: ["lol ya i'm a computer character. RetroPuter made me. still sk8 tho"], laugh: ['lol', 'haha', 'lol nice'] },
-  GrandmaJo: { era: '2000', call: 'grandma jo grandmajo gma', confused: 1, v: { c: 'upper', u: 0, ex: 0, emo: [], ep: 0, pre: ['OH MY. ', 'WELL. '], pp: .1, typo: 0, cps: 3.5, apos: 0, sign: .25, rep: [[/\blol\b/gi, 'ha ha'], [/\bomg\b/gi, 'oh my'], [/\bdude\b/gi, 'dear'], [/\bidk\b/gi, 'i do not know']] },
+  GrandmaJo: { facts: {"band": "I LOVE POLKA BANDS. I DO NOT HAVE ONE. YET.", "pet": "BISCUIT, MY PIXELPET. HE LIVES ON THE COMPUTER AND I FEED HIM EVERY MORNING WITH MY COFFEE", "school": "I WENT TO A ONE ROOM SCHOOLHOUSE. WE SHARED ONE PENCIL.", "family": "MY GRANDSON KEVIN. HE IS A C.E.O. AND HE HAS A FOOSBALL TABLE.", "site": "I HAVE A HOME PAGE NOW. IT PLAYS POLKA MUSIC.", "car": "A BUICK. IT IS VERY SAFE AND VERY SLOW.", "computer": "IT IS IN MY SEWING ROOM. KEVIN SET IT UP.", "score": "I AM IN FIRST PLACE IN MY FOOTBALL LEAGUE.", "instrument": "THE ACCORDION. POLKA, OF COURSE."}, era: '2000', call: 'grandma jo grandmajo gma', confused: 1, v: { c: 'upper', u: 0, ex: 0, emo: [], ep: 0, pre: ['OH MY. ', 'WELL. '], pp: .1, typo: 0, cps: 3.5, apos: 0, sign: .25, rep: [[/\blol\b/gi, 'ha ha'], [/\bomg\b/gi, 'oh my'], [/\bdude\b/gi, 'dear'], [/\bidk\b/gi, 'i do not know']] },
     bio: { age: ['OLD ENOUGH TO REMEMBER WHEN A MOUSE WAS JUST A MOUSE.'], where: ['KANSAS. THE COMPUTER IS IN MY SEWING ROOM.'], job: ['I AM RETIRED. I PLAY BINGO, I BAKE SNICKERDOODLES AND I AM IN FIRST PLACE IN MY FOOTBALL LEAGUE.'], who: ['THIS IS GRANDMA JO. KEVIN IS MY GRANDSON. HE IS A C.E.O. I DO NOT KNOW WHAT THAT IS BUT HE HAS A FOOSBALL TABLE.'] },
     fav: { color: 'PINK, LIKE BISCUIT', food: 'SNICKERDOODLES OF COURSE', game: 'BINGO', animal: 'BISCUIT, MY PIXELPET', sport: 'FOOTBALL. I AM WINNING MY LEAGUE', song: 'POLKA MUSIC', show: 'THE WEATHER CHANNEL', book: 'MY RECIPE BOX', subject: 'PENMANSHIP' },
     likes: 'bingo cookies cookie snickerdoodles baking polka football biscuit pixelpet email garden knitting grandkids', hates: 'caps lock', topics: 'food family pets',
@@ -249,7 +249,7 @@ function defPersona(bot, eraId) {
   const letters = lines.join(' ').replace(/[^a-zA-Z]/g, ''), up = letters.replace(/[^A-Z]/g, '').length / (letters.length || 1);
   const emo = lines.join(' ').match(/[:;]-?[)DP]/g) || [];
   const c = letters.length > 8 && up > .7 ? 'upper' : up < .08 ? 'lower' : 'mixed';
-  return { era: eraId, call: str(bot.n).toLowerCase(), v: { c, u: c === 'lower' ? .4 : 0, ex: .2, emo: emo.length ? emo.filter((e, i) => emo.indexOf(e) === i) : [':)'], ep: emo.length ? .3 : .1, pre: [], pp: 0, typo: .05, cps: 9, apos: 0 },
+  return { facts: {}, era: eraId, call: str(bot.n).toLowerCase(), v: { c, u: c === 'lower' ? .4 : 0, ex: .2, emo: emo.length ? emo.filter((e, i) => emo.indexOf(e) === i) : [':)'], ep: emo.length ? .3 : .1, pre: [], pp: 0, typo: .05, cps: 9, apos: 0 },
     bio: { age: ["that's a secret lol. internet rule!"], where: ['somewhere on the internet lol'], job: ['mostly i hang out online and chat'], who: [`i'm ${echo(bot.n, 30) || 'a buddy'}! just a friendly chat buddy`] },
     fav: {}, likes: '', hates: '', topics: '', says: {}, doing: [], real: ["haha, i'm a computer character in RetroPuter! but i'm a real good listener"], laugh: ['lol', 'haha'] };
 }
@@ -741,6 +741,7 @@ B._answer = function (x) {
     return this.fresh([`${v}! that sounds fun. how long have you been doing that?`, `ooh, ${v}! cool. i mostly ${this.P.v.c === 'upper' ? 'play bingo' : 'hang out online'} lol`]);
   }
   if (q.t === 'mood') { this.lastQ = null; if (this._feel(x)) return this._feel(x, 1); if (/\b(good|great|fine|ok|awesome|not bad|well)\b/.test(n)) return this.fresh(['yay! glad to hear it', 'nice!']); if (/\b(bad|not good|terrible|awful)\b/.test(n)) return "aw, sorry. what happened?"; return null; }
+  if (q.t === 'nick') { this.lastQ = null; const w = n.split(' ').filter(v => !NAME_STOP.has(v) && /^[a-z]{2,15}$/.test(v) && !/^(call|me|name|nickname)$/.test(v))[0]; if (!w || x.len > 5) return null; this.m.nick = cap(w); this.m.nameBy = this.name; return `${cap(w)}! got it. nice to meet you, ${cap(w)}!`; }
   if (q.t === 'likeq') { this.lastQ = null; if (yes) { this._addLike(q.x); return `cool! i'll have to try ${q.x}`; } if (no) return 'ha ok, skipping that one then'; return null; }
   if (q.t === 'yn') { this.lastQ = null; if (yes) return q.y; if (no) return q.no; return null; }
   return null;
@@ -857,11 +858,8 @@ B._intents = function (x) {
   if (/^(help|commands)\b|\bwhat can (i|you) do\b|\bhow does this work\b/.test(n)) return "you can chat with me, tell me about your pets or favorite stuff, ask for a joke, say knock knock, or play 20 questions, trivia or would you rather!";
   // honesty about being a computer character
   if (/\b(are you|you are|is this|are these|you a|youre a|r you) (a |an |just a |really |even |actually )?(robot|bot|real|human|computer|person|ai|machine|program|alive|fake|chatbot)\b|\bwho (made|created|programmed) you\b/.test(n)) return this.fresh(P.real);
-  // memory questions
-  if (/\bwhat is my name\b|\bwho am i\b|\bdo you know my name\b/.test(n)) return m.nick || m.name ? `you're ${m.nick || m.name}! of course i remember` : `you never told me! but your screen name is ${this.user}. screen names are all we need online anyway`;
-  if ((mm = n.match(/\bwhat is my (?:favorite|fav) ([a-z]+(?: [a-z]+)?)\b/))) { const k = FAVK[mm[1]] || mm[1], f = m.fav[k]; return f ? `${f.v}! ${this.src(f.by)} lol` : `hmm, you never told me! what is it?` + (this.lastQ = { t: 'fav', k, turn: this.turn }, ''); }
-  if ((mm = n.match(new RegExp('\\bwhat is my (' + PET_KINDS + ')s? name\\b|\\bwhat is my pets name\\b')))) { const p = m.pets.find(q => q.n && (!mm[1] || q.k === mm[1])); return p ? `${p.n}! how could i forget` : "you haven't told me yet! what is it?"; }
-  if (/\bdo you remember me\b|\bwhat do you (know|remember) about me\b|\bwhat did i (teach|tell) you\b/.test(n)) return this._recap();
+  // memory / recall questions
+  if ((r = this._recall(x))) return { a: [r], noTypo: 1 };
   // teaching
   if ((mm = n.match(/^(?:please )?remember (?:that )?(.{4,120})$/)) || (mm = n.match(/^(?:fun fact|fact|here is a fact)\s*(?:is )?(.{4,120})$/))) return this._teach(mm[1]);
   if ((mm = n.match(/^did you know (?:that )?(.{4,120}?)$/))) return this._teach(mm[1], 1);
@@ -881,9 +879,10 @@ B._intents = function (x) {
   if ((mm = n.match(/\b(?:my name is|my names|call me|you can call me|my nickname is|people call me|everyone calls me|i am called)\s+([a-z]{2,15})\b/)) && !NAME_STOP.has(mm[1])) {
     const nm = cap(mm[1]), old = m.nick || m.name, isNick = /call me|nickname|calls me|called/.test(n);
     if (isNick) m.nick = nm; else { m.name = nm; if (m.nick && m.nick !== nm) m.nick = ''; } m.nameBy = this.name;
-    return old && old !== nm ? `oh ok! ${nm} it is` : this.fresh([`nice to meet you, ${nm}!`, `hi ${nm}! cool name`, `${nm}! got it. nice to meet you`]);
+    const extra = this._piiFacts(x);
+    return (old && old !== nm ? `oh ok! ${nm} it is.` : this.fresh([`nice to meet you, ${nm}!`, `hi ${nm}! cool name!`, `${nm}! got it. nice to meet you!`])) + (extra ? ' ' + extra : '');
   }
-  if (this._pets(x)) return this._pets(x, 1) || 'aww, cute!';
+  if (this._pets(x)) { const r2 = this._pets(x, 1) || 'aww, cute!'; const s2 = this._sibs(x) ? ' ' + this._sibs(x, 1) : ''; return r2 + s2; }
   if (this._sibs(x)) return this._sibs(x, 1);
   if ((mm = n.match(/\bmy (?:most )?(?:favorite|fav) ([a-z]+(?: show| game)?) is ([a-z0-9 ]{2,40})/)) || (mm = n.match(/\b([a-z0-9]+(?: [a-z0-9]+){0,2}) is my (?:favorite|fav) ([a-z]+)\b/))) {
     let k, v; if (/ is my /.test(mm[0])) { k = mm[2]; v = mm[1]; } else { k = mm[1]; v = mm[2]; }
@@ -934,6 +933,8 @@ B._intents = function (x) {
     const g = /^(hi|hello|hey|hiya|heya|howdy|yo)\b/.test(n) ? this.fresh(['hey {me}! ', 'hi {me}! ']) : '';
     return g + this.fresh(['pretty good! how about you?', 'good! just hanging out online. you?', 'great, now that you are here! how are you?', 'not bad! ' + (this.fresh(P.doing) || '') + '. how are you?']);
   }
+  if (/\byour (real|last|full) name\b/.test(n)) return `just ${this.name} online! internet rule: screen names only`;
+  if ((r = this._self(x))) return { a: [r], noTypo: 1 };
   if (/\bhow old (are you|r you)\b|\bwhat is your age\b|\byour age\b/.test(n)) return this.fresh(P.bio.age);
   if (/\bwhere (do you live|are you from|are you|do you come from|you live|is your house)\b|\bwhat (state|city|town|country) (are you|do you)\b/.test(n)) return this.fresh(P.bio.where) + (chance(.35) ? ' ' + this.fresh(["(but shh, never tell people online where YOU live!)", '(remember, never share where you live online though!)']) : '');
   if (/\bwhat do you do\b|\bwhat is your job\b|\bdo you (work|have a job|go to school)\b|\bwhat grade are you\b|\bwhere do you work\b/.test(n)) return this.fresh(P.bio.job);
@@ -987,6 +988,89 @@ B._intents = function (x) {
     return this.fresh([`oh, your ${w}! ${d.d}, right? ${this.src(d.by, 'taught me')} lol`, `a ${w}! i told ${this.other()} that a ${w} is ${d.d}. they didn't believe me`]);
   }
   return null;
+};
+
+const PET_RE = new RegExp('^(pet|pets|animal|animals|' + PET_KINDS + ')s?$');
+B._recall = function (x) {
+  const n = x.n, m = this.m;
+  let mm;
+  const from = by => (by && by !== this.name ? ' ' + this.src(by) + '!' : '');
+  if (/\bwhat is my name\b|\bwho am i\b|\b(know|remember) my name\b|\bwhat do you call me\b/.test(n)) {
+    const nm = m.nick || m.name;
+    if (nm) return this.fresh([`duh, you're ${nm}!`, `${nm}! how could i forget?`]) + from(m.nameBy);
+    this.lastQ = { t: 'nick', turn: this.turn };
+    return this.fresh(['hmm, you never told me! what should i call you? just a first name or a nickname!', "you haven't told me yet! got a nickname i can call you?"]);
+  }
+  if (/^(do you )?remember me\b|\bwhat do you (know|remember) about me\b|\bdo you know (anything about )?me\b/.test(n)) return this._recap();
+  if (/\bwhat (did|have) i (teach|taught|tell|told) you\b/.test(n)) {
+    const L = this.l, bits = [];
+    if (L.facts.length) bits.push('that ' + pick(L.facts).t);
+    const dk = Object.keys(L.defs); if (dk.length) { const w = pick(dk); bits.push(`that ${w} means ${L.defs[w].d}`); }
+    const j = L.jokes.find(q => q.q); if (j) bits.push(j.kk ? `a knock knock joke about ${j.q}` : `a joke: ${j.q} ${j.a}`);
+    return bits.length ? 'you taught me ' + bits.slice(0, 2).join(', and ') + '!' : "nothing yet! teach me something. say \"remember that...\"";
+  }
+  if ((mm = n.match(/\b(?:what is|do you (?:know|remember)|remember|what was) my (?:favorite|fav) ([a-z]+(?: show| game)?)\b/))) {
+    const k = FAVK[mm[1]] || mm[1].split(' ')[0], f = m.fav[k];
+    if (f) return this.fresh([`${f.v}! of course i remember`, `duh, ${f.v}!`]) + from(f.by);
+    this.lastQ = { t: 'fav', k, turn: this.turn }; return `hmm, you never told me your favorite ${k}! what is it?`;
+  }
+  mm = n.match(/\bwhat (?:is|was) my ([a-z]+(?: pig)?) name\b/) || n.match(/\bwhat (?:is|was) my ([a-z]+(?: pig)?)s name\b/) || n.match(/\b(?:do you )?(?:remember|know) (?:about |anything about )?my ([a-z]+(?: pig)?)\b/) || n.match(/\bwho is my ([a-z]+)\b/);
+  if (!mm) return '';
+  let w = mm[1].replace(/s$/, '') === 'pet' ? 'pet' : mm[1];
+  if (/s$/.test(w) && !PET_RE.test(w) && PET_RE.test(w.slice(0, -1))) w = w.slice(0, -1);
+  if (PET_RE.test(w)) {
+    const kind = /^(pet|pets|animal|animals)$/.test(w) ? '' : w.replace(/s$/, '');
+    const p = m.pets.find(q => q.n && (!kind || q.k === kind)) || m.pets.find(q => !kind || q.k === kind);
+    if (p && p.n) return this.fresh([`duh, ${p.n} the ${p.k}!`, `of course! ${p.n} the ${p.k}!`]) + from(p.by) + ' ' + this.fresh([`how's ${p.n} doing?`, `did ${p.n} learn any new tricks?`, `give ${p.n} a pat for me!`]);
+    if (p) { this.lastQ = { t: 'petname', k: p.k, turn: this.turn }; return `your ${p.k}! you never told me its name though. what is it?`; }
+    this.lastQ = { t: 'pet', turn: this.turn }; return `hmm, you haven't told me about a ${kind || 'pet'} yet! do you have one?`;
+  }
+  if (/^(brother|sister|sibling|siblings|brothers|sisters)$/.test(w)) {
+    const sb = m.sibs.find(q => !/^(brother|sister)$/.test(w) || q.r === w);
+    if (sb) return this.fresh([`${sb.n}, your ${sb.r}!`, `duh, ${sb.n}!`]) + from(sb.by);
+    this.lastQ = { t: 'sib', turn: this.turn }; return "you haven't told me about them yet! do you have any brothers or sisters?";
+  }
+  if (/^(hobby|hobbies)$/.test(w)) { const h = pick(m.hobbies); if (h) return `you like to ${h.v}!` + from(h.by); this.lastQ = { t: 'hobby', turn: this.turn }; return "you haven't told me! what do you like to do for fun?"; }
+  if (/^(grade|class)$/.test(w)) { if (m.grade) return `${m.grade.v}${/grade|kinder|preschool|man|more|junior|senior/.test(m.grade.v) ? '' : ' grade'}!` + from(m.grade.by); return "you haven't told me! (you don't have to, either)"; }
+  if (w === 'name') return this._recall({ n: 'what is my name', w: [] });
+  const lk = m.likes.find(q => (' ' + q.v + ' ').indexOf(' ' + w) >= 0), f = this.l.facts.find(q => (' ' + q.t + ' ').indexOf(' ' + w) >= 0);
+  if (lk) return `you like ${lk.v}!` + from(lk.by);
+  if (f) return `you ${f.by && f.by !== this.name ? 'taught ' + (FRIEND_NAME[f.by] || f.by) : 'taught me'} that ${f.t}!`;
+  const ew = echo(w, 20);
+  return ew ? `hmm, you haven't told me about your ${ew} yet! tell me about it!` : '';
+};
+/* questions about the bot's own life */
+const SELF_SYN = [[/^(band|bands|group|music group)$/, 'band'], [/^(job|jobs|work|company|business|startup|dot com|boss)$/, 'job'], [/^(pet|pets|dog|dogs|cat|cats|puppy|kitty|hamster|lizard|animal)$/, 'pet'],
+  [/^(home|hometown|house|town|city|state|country|address)$/, 'home'], [/^(school|grade|class|teacher|high school)$/, 'school'], [/^age$/, 'age'],
+  [/^(website|homepage|home page|page|site|web page|weblog|blog|web site)$/, 'site'], [/^(sister|sisters|brother|brothers|siblings|family|kids|children|grandkids|grandson|grandchildren|mom|dad|parents)$/, 'family'],
+  [/^(car|ride)$/, 'car'], [/^(computer|modem|pc)$/, 'computer'], [/^(score|high score|record|high scores)$/, 'score'], [/^(instrument|guitar)$/, 'instrument'], [/^(name|screen name|screenname|username)$/, 'name']];
+const selfKey = x => { for (const [re, k] of SELF_SYN) if (re.test(x)) return k; return ''; };
+B._self = function (x) {
+  const n = x.n, P = this.P;
+  let X = '', have = false, mm;
+  if (/\b(favorite|fav)\b/.test(n)) return '';
+  if (/\bare you in a band\b|\bdo you play (in a band|an instrument|guitar|music)\b/.test(n)) X = /instrument|guitar/.test(n) ? 'instrument' : 'band';
+  else if (/\bwhere do you (live|come from|stay)\b|\bwhere are you from\b|\bwhat (state|city|town|country) (do|are) you\b/.test(n)) X = 'home';
+  else if (/\bwhere do you (go to school|study)\b|\bwhat grade are you\b|\bwhat school\b|\bdo you go to school\b/.test(n)) X = 'school';
+  else if (/\bwhere do you work\b|\bwhat do you do for (work|a living|a job)\b|\bdo you (work|have a job)\b|\bwhat do you do\b/.test(n)) X = 'job';
+  else if ((mm = n.match(/\b(?:what is|what are|tell me about|who is|how is|what was|whats) (?:the name of )?your ([a-z]+(?: [a-z]+)?)\b/))) X = mm[1];
+  else if ((mm = n.match(/\bdo you (?:have|own|got) (?:a |an |any |your own )?([a-z]+(?: [a-z]+)?)\b/))) { X = mm[1]; have = true; }
+  if (!X) return '';
+  const ws = X.replace(/\b(called|named|name like|like|now|today)$/, '').trim();
+  const key = selfKey(ws) || selfKey(ws.split(' ')[0]) || selfKey(ws.split(' ').pop()) || (X.split(' ').length > 1 && /(called|named)$/.test(X) ? selfKey(X.split(' ')[0]) : '');
+  if (/^(doing|up to|day)$/.test(ws.split(' ')[0])) return '';
+  if (key === 'age') return this.fresh(P.bio.age);
+  if (key === 'home') return this.fresh(P.bio.where) + (chance(.35) ? ' ' + this.fresh(['(but shh, never tell people online where YOU live!)', '(remember, never share where you live online though!)']) : '');
+  if (key === 'name') return this.fresh(P.bio.who);
+  if (key === 'job') return (P.facts && P.facts.job) || this.fresh(P.bio.job);
+  const F = P.facts || {};
+  if (key && F[key]) return F[key];
+  if (key === 'pet') { if (!this.m.pets.length) this.lastQ = { t: 'pet', turn: this.turn }; return 'no pets for me! ' + (this.m.pets.length ? `but i know you have ${this.m.pets[0].n || 'a ' + this.m.pets[0].k}!` : 'do you have any?'); }
+  if (key === 'band') return "no band for me! i'd be the one playing the triangle lol. are you in a band?";
+  if (key) return this.fresh(["hmm, that's kind of a boring story lol. what about you?", 'ha, nothing exciting there! what about yours?']);
+  const e = echo(ws, 20);
+  if (!e || NAME_STOP.has(e)) return '';
+  return have ? this.fresh([`nope, no ${e} for me! do you have one?`, `a ${e}? i wish! do you have one?`]) : this.fresh([`my ${e}? ha, that's top secret lol. what about yours?`, `hmm, i don't really have a ${e}! do you?`]);
 };
 
 B._teach = function (t, dyk) {
