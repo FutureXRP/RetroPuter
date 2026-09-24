@@ -702,7 +702,10 @@ function playMusic(song, owner = 'web') {
   const mel = song.mel, bass = song.bass, len = mel.length, step = song.step;
   let n = 0, t = a.currentTime + 0.1;
   const sched = () => {
-    while (t < a.currentTime + 0.6) {
+    // Background tabs run timers about once a second, so queue 1.5s ahead,
+    // and skip (rather than cram in) any notes missed during a longer stall.
+    if (t < a.currentTime) { const skip = Math.ceil((a.currentTime - t) / step); n += skip; t += skip * step; }
+    while (t < a.currentTime + 1.5) {
       const i = n % len, rel = t - a.currentTime;
       if (mel[i]) tone(midi(mel[i]), step * (song.hold || 0.85), { type: song.lead || 'square', vol: song.leadVol || 0.03, dest: bus, at: rel });
       if (song.harm && mel[i]) tone(midi(mel[i] - 12 + song.harm), step * 0.8, { type: 'triangle', vol: 0.015, dest: bus, at: rel });
