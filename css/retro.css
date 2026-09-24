@@ -628,3 +628,17 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .cp .ss-row select{flex:1;min-width:0}
 .cp .ss-row input[type=text]{flex:1;min-width:0}
 .cp [data-smsg][hidden]{display:none}
+
+/* ---- ad slot on the desk view ---- */
+.rm-ad{position:absolute;z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px}
+.rm-ad[hidden]{display:none}
+.rm-ad small{font:9px/1 Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 2px #000}
+.rm-ad-box{box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 14px;overflow:hidden;background:linear-gradient(90deg,#10204a,#1e3f8a 60%,#2a58b8);border:1px solid #0a1230;box-shadow:0 4px 14px rgba(0,0,0,.45);color:#fff;font-family:Arial,Helvetica,sans-serif}
+.rm-ad-box .ad-ico svg{width:46px;height:46px;display:block}
+.rm-ad-box .ad-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rm-ad-box .ad-txt b{font:700 22px Georgia,"Times New Roman",serif;color:#ffd84d;white-space:nowrap}
+.rm-ad-box .ad-txt span{font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm-ad-box .ad-dim{font:11px monospace;border:1px dashed rgba(255,255,255,.6);padding:3px 6px;opacity:.85}
+.rm-ad-box.s468{gap:8px;padding:0 10px}.rm-ad-box.s468 .ad-ico svg{width:34px;height:34px}.rm-ad-box.s468 .ad-txt b{font-size:17px}.rm-ad-box.s468 .ad-txt span{font-size:11px}
+.rm-ad-box.s320{gap:6px;padding:0 8px}.rm-ad-box.s320 .ad-ico svg{width:28px;height:28px}.rm-ad-box.s320 .ad-txt{gap:1px}.rm-ad-box.s320 .ad-txt b{font-size:14px}.rm-ad-box.s320 .ad-txt span{font-size:10px}.rm-ad-box.s320 .ad-dim{font-size:9px;padding:2px 4px}
+@media (max-height:720px){.rm-ui .power-box small{display:none}}
