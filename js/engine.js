@@ -2150,12 +2150,29 @@ function layoutRoom() {
   let ax = 0, ay = 0, aw = W, ah = H;
   if (land) { const uiw = Math.min(W * 0.42, 480); ax = uiw; aw = W - uiw; }
   else { const uih = ui.offsetHeight; ay = uih; ah = H - uih; }
+  // Ad slot: standard sizes, only on the desk (never over the computer's screen or windows).
+  const ad = land ? (aw >= 760 && H >= 560 ? [728, 90] : aw >= 500 && H >= 460 ? [468, 60] : null) : (W >= 330 && ah >= 420 ? [320, 50] : null);
+  placeAd(ad, land ? ax + (aw - (ad ? ad[0] : 0)) / 2 : (W - (ad ? ad[0] : 0)) / 2, land ? 14 : H - (ad ? ad[1] : 0) - 12);
+  if (ad && land) { ay += ad[1] + 30; ah -= ad[1] + 30; } else if (ad) ah -= ad[1] + 24;
   const u = Math.max(2, Math.min(aw / 102, ah / 80));
   rig.style.setProperty('--u', u + 'px');
   const left = ax + (aw - 100 * u) / 2, top = ay + Math.max(0, (ah - 78 * u) / 2);
   rig.style.left = left + 'px'; rig.style.top = top + 'px';
   room.querySelector('.rm-desk').style.top = (top + 62 * u) + 'px';
   fitScreen();
+}
+/* A sample "house" ad in the slot, until a real advertiser or ad network fills it.
+   To use real ad code, replace the contents of .rm-ad-box (keep the size). */
+function placeAd(size, x, y) {
+  const el = room.querySelector('.rm-ad');
+  if (!size) { el.hidden = true; return; }
+  const [w, h] = size, key = w + 'x' + h;
+  el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
+  const box = el.querySelector('.rm-ad-box');
+  box.style.width = w + 'px'; box.style.height = h + 'px';
+  if (box.dataset.size === key) return;
+  box.dataset.size = key; box.className = 'rm-ad-box s' + w;
+  box.innerHTML = `<span class="ad-ico">${ICONS.pc}</span><span class="ad-txt"><b>Your brand here</b><span>Reach families and retro fans on RetroPuter</span></span><span class="ad-dim">${w}×${h}</span>`;
 }
 function glass() { const g = room.querySelector('.glass'); return g ? g.getBoundingClientRect() : { left: 0, top: 0, width: VW, height: VH }; }
 const fitTransform = g => `translate(${g.left}px,${g.top}px) scale(${g.width / VW})`;
