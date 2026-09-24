@@ -74,7 +74,7 @@ function page(url, h) {
       return { title: 'Shareware Shack: Free Downloads', cls: '', blocks: [
         `<h1>Shareware Shack</h1><p>Try it free! If you like it, mail the author a check.</p>`,
         h.dlTable([['JOKES.TXT', 2, 'Four jokes, text only'], ['SKYBLAST.ZIP', 1200, 'Space shooting game'], ['CATPIC.GIF', 180, 'A photo of a cat'], ['SONG.MP3', 3000, 'One song. Yes, just one.']]),
-        `<p><small>Tip: Start big downloads before bed. Don't let anyone use the phone!</small></p><p>${A(SITES.home, 'Back to PrairieNet')}</p>`
+        `<p><small>Tip: Start big downloads before bed. Don't let anyone use the phone!</small></p><p><b>Want the full versions?</b> ${h.APP('store', 'Order boxed games from the Cardinal Software Catalog')}: shipped on floppy disks!</p><p>${A(SITES.home, 'Back to PrairieNet')}</p>`
       ], after(root) { h.bindDownloads(root); }};
     default:
       return { title: '404 Not Found', cls: '', blocks: [
@@ -189,7 +189,8 @@ THINGS TO TRY
 4. Try downloading something. Watch the clock.
 5. Beat Mines. Get a big score in Worm.
 6. Leave the computer alone for a minute...
-7. Click the hourglass on the taskbar to jump ahead to 1995 or 2000. Watch how much faster the internet gets.`,
+7. Click the hourglass on the taskbar to jump ahead to 1995 or 2000. Watch how much faster the internet gets.
+8. Open the Software Store. You start with $60 of birthday money, get a $10 allowance each day you visit, and earn more by winning the free games. Boxed games from 1990 arrive on floppy disks, and they keep working when you travel forward in time.`,
     'JOKES.TXT':
 `JOKES.TXT  (downloaded from Shareware Shack)
 -------------------------------------------
