@@ -624,3 +624,7 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 #room:not(.land) .rm-ui .power-box small{display:none}
 #room:not(.land) .rm-ui .power-box h1{font-size:clamp(1.4rem,6.5vw,2rem)}
 #room:not(.land) .rm-ui .pwr{padding:8px 20px;font-size:1.3rem}
+.cp .ss-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cp .ss-row select{flex:1;min-width:0}
+.cp .ss-row input[type=text]{flex:1;min-width:0}
+.cp [data-smsg][hidden]{display:none}
