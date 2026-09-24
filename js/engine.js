@@ -1260,7 +1260,8 @@ function openSettings() {
   openWin({ id: 'cp', title: 'Control Panel', icon: 'cp', w: 360, fixed: true, autoH: true, build(W) {
     W.body.innerHTML = `<div class="cp">
       <fieldset><legend>Sound</legend><label>Volume <input type="range" min="0" max="1" step="0.05" data-vol style="width:100%"></label><button class="btn" data-test>Test sound</button></fieldset>
-      <fieldset><legend>Monitor</legend><label><input type="checkbox" data-crt> Old monitor glow and scan lines</label><label><input type="checkbox" data-saver> ${esc(era.saverName)} screen saver after 1 minute</label></fieldset>
+      <fieldset><legend>Monitor</legend><label><input type="checkbox" data-crt> Old monitor glow and scan lines</label></fieldset>
+      <fieldset><legend>Screen saver</legend><div class="ss-row"><select data-sk aria-label="Screen saver"><option value="">(None)</option>${saversFor().map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select><button class="btn" data-sp>Preview</button></div><label class="ss-row">Wait <select data-sw aria-label="Minutes before the screen saver starts">${[1, 2, 3, 5, 10, 15].map(m => `<option value="${m}">${m}</option>`).join('')}</select> minute(s)</label><label class="ss-row" data-smsg>Message <input type="text" maxlength="40" data-st aria-label="Scrolling message text"></label></fieldset>
       <fieldset><legend>Desktop color</legend><div class="sws"></div></fieldset>
       <fieldset><legend>Time machine</legend><button class="btn" data-tw>Travel to another year…</button></fieldset>
       <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button></div></fieldset>
@@ -1271,8 +1272,14 @@ function openSettings() {
     b.querySelector('[data-test]').onclick = () => sfx[era.sounds.start]();
     const crt = b.querySelector('[data-crt]'); crt.checked = settings.crt;
     crt.onchange = () => { settings.crt = crt.checked; screen.classList.toggle('crt', settings.crt); saveSettings(); };
-    const sv = b.querySelector('[data-saver]'); sv.checked = settings.saver;
-    sv.onchange = () => { settings.saver = sv.checked; saveSettings(); };
+    const sk = b.querySelector('[data-sk]'), sw = b.querySelector('[data-sw]'), st = b.querySelector('[data-st]'), smsg = b.querySelector('[data-smsg]');
+    sk.value = settings.saver ? saverKind() : ''; sw.value = String(settings.saverWait || 1); st.value = settings.saverText || 'Welcome to ' + era.os.name + '!';
+    const syncMsg = () => { smsg.hidden = !(SAVERS[sk.value] && SAVERS[sk.value].custom); };
+    sk.onchange = () => { settings.saver = !!sk.value; if (sk.value) settings.saverKind = sk.value; saveSettings(); syncMsg(); };
+    sw.onchange = () => { settings.saverWait = +sw.value; saveSettings(); };
+    st.oninput = () => { settings.saverText = st.value.slice(0, 40); saveSettings(); };
+    b.querySelector('[data-sp]').onclick = () => startSaver(sk.value || saverKind(), true);
+    syncMsg();
     const sws = b.querySelector('.sws');
     era.walls.forEach(([k, c, l, sw]) => {
       const x = document.createElement('button'); x.style.background = sw || c; x.title = l; x.setAttribute('aria-label', l);
@@ -1663,8 +1670,174 @@ function openJukebox(autoplay) {
 }
 
 /* ---------- screensavers ---------- */
-const saver = $('#saver'); let idleT = 0, saverOn = false, saverRAF = 0;
+// Pick one in Control Panel. `from` is the first year it's offered; 1985 draws everything in the monitor's phosphor color.
+const saver = $('#saver'); let idleT = 0, saverOn = false, saverRAF = 0, wakeGuard = 0;
+const SAVERS = {
+  blank: { name: 'Blank screen', from: 1985, make: g => () => {} },
+  stars: { name: 'Starfield', from: 1985, make(g, W, H, ink) {
+    const cx = W / 2, cy = H / 2, stars = Array.from({ length: 220 }, () => ({ x: (Math.random() - 0.5) * W, y: (Math.random() - 0.5) * H, z: Math.random() * W }));
+    return () => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      stars.forEach(s => {
+        s.z -= 6; if (s.z < 1) { s.z = W; s.x = (Math.random() - 0.5) * W; s.y = (Math.random() - 0.5) * H; }
+        const k = 200 / s.z, sz = Math.max(1, 3 - s.z / 250);
+        g.fillStyle = ink || (s.z < 200 ? '#fff' : '#aaa'); g.globalAlpha = ink && s.z > 200 ? 0.6 : 1;
+        g.fillRect(cx + s.x * k, cy + s.y * k, sz, sz); g.globalAlpha = 1;
+      });
+    };
+  } },
+  rain: { name: 'Falling letters', from: 1985, make(g, W, H, ink) {
+    const fs = 16, cols = Math.ceil(W / fs), drops = Array.from({ length: cols }, () => Math.random() * -H / fs), chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*<>?';
+    g.font = `${fs}px VT323, "Courier New", monospace`;
+    let t = 0;
+    return () => {
+      if (++t % 3) return;
+      g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = ink || '#3f6'; g.font = `${fs}px VT323, "Courier New", monospace`;
+      drops.forEach((d, i) => { g.fillText(pick(chars), i * fs, d * fs); drops[i] = d * fs > H && Math.random() > 0.97 ? 0 : d + 1; });
+    };
+  } },
+  mystify: { name: 'Mystery lines', from: 1990, make(g, W, H) {
+    const mk = () => Array.from({ length: 4 }, () => ({ x: Math.random() * W, y: Math.random() * H, dx: (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1), dy: (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1) }));
+    const shapes = [{ p: mk(), h: 200 }, { p: mk(), h: 30 }];
+    return () => {
+      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, 0, W, H);
+      shapes.forEach(s => {
+        s.h = (s.h + 0.6) % 360;
+        s.p.forEach(v => { v.x += v.dx; v.y += v.dy; if (v.x < 0 || v.x > W) v.dx *= -1; if (v.y < 0 || v.y > H) v.dy *= -1; });
+        g.strokeStyle = `hsl(${s.h},100%,60%)`; g.lineWidth = 1.5; g.beginPath();
+        s.p.forEach((v, i) => i ? g.lineTo(v.x, v.y) : g.moveTo(v.x, v.y)); g.closePath(); g.stroke();
+      });
+    };
+  } },
+  floppies: { name: 'Flying floppies', from: 1990, make(g, W, H) {
+    const cols = ['#223', '#1a3a8a', '#8a1a1a', '#1a6a2a', '#555'];
+    const disks = Array.from({ length: 14 }, () => ({ x: Math.random() * W * 1.5, y: Math.random() * H * 1.5 - H * 0.5, s: 0.6 + Math.random() * 0.8, c: pick(cols), f: Math.random() * 6 }));
+    const draw = d => {
+      const s = 30 * d.s, flap = Math.sin(d.f) * 0.8;
+      g.save(); g.translate(d.x, d.y);
+      g.fillStyle = '#ddd';
+      [-1, 1].forEach(side => { g.beginPath(); g.moveTo(side * s * 0.5, -s * 0.2); g.lineTo(side * s * 1.25, -s * (0.55 + flap * 0.5)); g.lineTo(side * s * 1.1, s * 0.05); g.closePath(); g.fill(); });
+      g.fillStyle = d.c; g.fillRect(-s / 2, -s / 2, s, s);
+      g.fillStyle = '#bbb'; g.fillRect(-s * 0.28, -s / 2, s * 0.5, s * 0.34); g.fillStyle = d.c; g.fillRect(-s * 0.05, -s * 0.44, s * 0.12, s * 0.22);
+      g.fillStyle = '#f4f4f4'; g.fillRect(-s * 0.36, s * 0.05, s * 0.72, s * 0.4);
+      g.fillStyle = '#88a'; g.fillRect(-s * 0.3, s * 0.14, s * 0.5, s * 0.04); g.fillRect(-s * 0.3, s * 0.26, s * 0.4, s * 0.04);
+      g.restore();
+    };
+    return () => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      disks.sort((a, b) => a.s - b.s).forEach(d => { d.x -= 1.6 * d.s; d.y += 0.9 * d.s; d.f += 0.25; if (d.x < -60 || d.y > H + 60) { d.x = W + 40 + Math.random() * W * 0.5; d.y = Math.random() * H - H * 0.4; } draw(d); });
+    };
+  } },
+  aquarium: { name: 'Aquarium', from: 1990, make(g, W, H) {
+    const cols = ['#ff8c1a', '#ffd21a', '#ff4f7b', '#4fd2ff', '#9b6bff', '#6bff8e'];
+    const fish = Array.from({ length: 9 }, () => ({ x: Math.random() * W, y: 40 + Math.random() * (H - 140), v: (0.6 + Math.random() * 1.2) * (Math.random() < 0.5 ? -1 : 1), s: 0.7 + Math.random() * 0.9, c: pick(cols), p: Math.random() * 6 }));
+    const bubbles = [], weed = Array.from({ length: Math.ceil(W / 70) }, (_, i) => ({ x: i * 70 + Math.random() * 40, h: 60 + Math.random() * 90 }));
+    let t = 0;
+    return () => {
+      t++;
+      const sea = g.createLinearGradient(0, 0, 0, H); sea.addColorStop(0, '#0a3a7a'); sea.addColorStop(1, '#021634');
+      g.fillStyle = sea; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#c8a860'; g.fillRect(0, H - 30, W, 30);
+      weed.forEach(w => { g.strokeStyle = '#1f8a3a'; g.lineWidth = 6; g.beginPath(); g.moveTo(w.x, H - 28); for (let k = 1; k <= 6; k++) g.lineTo(w.x + Math.sin(t / 30 + k + w.x) * 8, H - 28 - w.h * k / 6); g.stroke(); });
+      if (Math.random() < 0.06) bubbles.push({ x: Math.random() * W, y: H - 30, r: 2 + Math.random() * 4 });
+      g.strokeStyle = 'rgba(200,230,255,.7)'; g.lineWidth = 1;
+      for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.y -= 1.2; b.x += Math.sin((b.y + i) / 12) * 0.4; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.3); g.stroke(); if (b.y < -10) bubbles.splice(i, 1); }
+      fish.forEach(f => {
+        f.x += f.v; f.p += 0.15; if (f.x < -60 || f.x > W + 60) { f.v *= -1; f.y = 40 + Math.random() * (H - 140); }
+        const s = 22 * f.s, dir = Math.sign(f.v), y = f.y + Math.sin(f.p / 3) * 4;
+        g.save(); g.translate(f.x, y); g.scale(dir, 1);
+        g.fillStyle = f.c; g.beginPath(); g.ellipse(0, 0, s, s * 0.55, 0, 0, 6.3); g.fill();
+        g.beginPath(); g.moveTo(-s * 0.8, 0); g.lineTo(-s * 1.5, -s * (0.5 + Math.sin(f.p) * 0.15)); g.lineTo(-s * 1.5, s * (0.5 + Math.sin(f.p) * 0.15)); g.closePath(); g.fill();
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(s * 0.5, -s * 0.12, s * 0.16, 0, 6.3); g.fill();
+        g.fillStyle = '#000'; g.beginPath(); g.arc(s * 0.55, -s * 0.12, s * 0.08, 0, 6.3); g.fill();
+        g.restore();
+      });
+    };
+  } },
+  fireworks: { name: 'Fireworks', from: 1990, make(g, W, H) {
+    const parts = [], rockets = [];
+    return () => {
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 0, W, H);
+      if (Math.random() < 0.035) rockets.push({ x: W * (0.15 + Math.random() * 0.7), y: H, vy: -(H / 90 + Math.random() * 3), h: Math.random() * 360 });
+      for (let i = rockets.length - 1; i >= 0; i--) {
+        const r = rockets[i]; r.y += r.vy; r.vy += 0.09;
+        g.fillStyle = '#fc6'; g.fillRect(r.x, r.y, 2, 5);
+        if (r.vy > -0.5) { rockets.splice(i, 1); const n = 60 + (Math.random() * 40 | 0); for (let k = 0; k < n; k++) { const a = Math.random() * 6.3, sp = 1 + Math.random() * 3.5; parts.push({ x: r.x, y: r.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, l: 60 + Math.random() * 30, h: r.h + Math.random() * 40 }); } }
+      }
+      for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.vx *= 0.985; p.l--; g.fillStyle = `hsla(${p.h},100%,65%,${Math.min(1, p.l / 40)})`; g.fillRect(p.x, p.y, 2, 2); if (p.l <= 0) parts.splice(i, 1); }
+    };
+  } },
+  marquee: { name: 'Scrolling message', from: 1990, custom: true, make(g, W, H) {
+    const text = settings.saverText || 'Welcome to ' + era.os.name + '!';
+    let x = W, y = H / 2, h = 0;
+    return () => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      g.font = '700 64px Georgia, "Times New Roman", serif';
+      const tw = g.measureText(text).width;
+      x -= 2.4; h = (h + 0.5) % 360;
+      if (x < -tw) { x = W; y = 70 + Math.random() * (H - 140); }
+      g.fillStyle = `hsl(${h},90%,62%)`; g.fillText(text, x, y);
+    };
+  } },
+  pipes: { name: 'Pipe maze', from: 1995, make(g, W, H) {
+    const S = 26, cw = Math.floor(W / S), ch = Math.floor(H / S);
+    let grid, pipes, filled, t;
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const reset = () => { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); grid = new Uint8Array(cw * ch); pipes = []; filled = 0; t = 0; };
+    const spawn = () => { for (let k = 0; k < 40; k++) { const x = Math.random() * cw | 0, y = Math.random() * ch | 0; if (!grid[y * cw + x]) { grid[y * cw + x] = 1; filled++; pipes.push({ x, y, d: pick(DIRS), h: Math.random() * 360 }); return; } } };
+    const shade = (h, l) => `hsl(${h},75%,${l}%)`;
+    const joint = p => { const cx = p.x * S + S / 2, cy = p.y * S + S / 2, gr = g.createRadialGradient(cx - 3, cy - 3, 1, cx, cy, S * 0.42); gr.addColorStop(0, shade(p.h, 80)); gr.addColorStop(1, shade(p.h, 30)); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, S * 0.42, 0, 6.3); g.fill(); };
+    const seg = (p, q) => {
+      const x1 = p.x * S + S / 2, y1 = p.y * S + S / 2, x2 = q.x * S + S / 2, y2 = q.y * S + S / 2, horiz = y1 === y2, w = S * 0.5;
+      const gr = horiz ? g.createLinearGradient(0, y1 - w / 2, 0, y1 + w / 2) : g.createLinearGradient(x1 - w / 2, 0, x1 + w / 2, 0);
+      gr.addColorStop(0, shade(p.h, 25)); gr.addColorStop(0.35, shade(p.h, 75)); gr.addColorStop(1, shade(p.h, 22));
+      g.fillStyle = gr; if (horiz) g.fillRect(Math.min(x1, x2), y1 - w / 2, Math.abs(x2 - x1), w); else g.fillRect(x1 - w / 2, Math.min(y1, y2), w, Math.abs(y2 - y1));
+    };
+    reset();
+    return () => {
+      if (++t % 2) return;
+      if (filled > cw * ch * 0.6) reset();
+      if (!pipes.length || (pipes.length < 3 && Math.random() < 0.01)) { spawn(); pipes.forEach(joint); }
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        const p = pipes[i];
+        const opts = (Math.random() < 0.75 ? [p.d] : []).concat(DIRS.slice().sort(() => Math.random() - 0.5)).filter(d => { const nx = p.x + d[0], ny = p.y + d[1]; return nx >= 0 && ny >= 0 && nx < cw && ny < ch && !grid[ny * cw + nx]; });
+        if (!opts.length) { joint(p); pipes.splice(i, 1); continue; }
+        const d = opts[0], q = { x: p.x + d[0], y: p.y + d[1], d, h: p.h };
+        if (d !== p.d) joint(p);
+        seg(p, q); grid[q.y * cw + q.x] = 1; filled++; pipes[i] = q;
+      }
+    };
+  } },
+  bounce: { name: 'Bouncing logo', from: 1995, make(g, W, H) {
+    const text = era.saverText || era.os.name; let x = W / 3, y = H / 3, dx = 2.2, dy = 1.8, h = 200;
+    g.font = '700 42px Tahoma, Verdana, sans-serif';
+    const tw = g.measureText(text).width;
+    return () => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      x += dx; y += dy;
+      if (x < 0 || x + tw > W) { dx *= -1; h = (h + 67) % 360; x = Math.max(0, Math.min(x, W - tw)); }
+      if (y < 42 || y > H) { dy *= -1; h = (h + 67) % 360; y = Math.max(42, Math.min(y, H)); }
+      g.font = '700 42px Tahoma, Verdana, sans-serif'; g.fillStyle = `hsl(${h},90%,60%)`; g.fillText(text, x, y);
+    };
+  } },
+  clock: { name: 'Big clock', from: 1995, make(g, W, H) {
+    let x = W / 2, y = H / 2, next = 0;
+    return () => {
+      const now = Date.now();
+      if (now > next) { next = now + 6000; x = W * (0.25 + Math.random() * 0.5); y = H * (0.3 + Math.random() * 0.45); }
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      const d = new Date(), t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      g.textAlign = 'center'; g.fillStyle = '#6cf'; g.font = '700 72px Tahoma, Verdana, sans-serif'; g.fillText(t, x, y);
+      g.fillStyle = '#8aa'; g.font = '20px Tahoma, Verdana, sans-serif'; g.fillText(d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) + ', ' + era.year, x, y + 36);
+      g.textAlign = 'start';
+    };
+  } }
+};
+const saversFor = () => Object.entries(SAVERS).filter(([, s]) => s.from <= era.year);
+const saverKind = () => { const k = settings.saverKind; return k && SAVERS[k] && SAVERS[k].from <= era.year ? k : (SAVERS[era.saver] ? era.saver : 'stars'); };
 function wake() {
+  if (Date.now() < wakeGuard) return;
   idleT = Date.now();
   if (saverOn) { saverOn = false; saver.style.display = 'none'; cancelAnimationFrame(saverRAF); }
 }
@@ -1672,51 +1845,18 @@ function wake() {
 setInterval(() => {
   if (saverOn || !settings.saver || !stageOn('st-desk')) return;
   if (music && music.owner === 'jb') { idleT = Date.now(); return; }
-  if (Date.now() - idleT > 60000) startSaver();
+  if (Date.now() - idleT > (settings.saverWait || 1) * 60000) startSaver();
 }, 2000);
-function startSaver() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  closeStart(); closeTW();
+function startSaver(kind, preview) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches && !preview) return;
+  closeStart(); closeTW(); closeMenu();
   saverOn = true; saver.style.display = 'block';
+  if (preview) wakeGuard = Date.now() + 900; // don't wake from the click that started the preview
   const r = saver.getBoundingClientRect(); saver.width = r.width; saver.height = r.height;
   const g = saver.getContext('2d'), Wd = r.width, Ht = r.height;
   g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Ht);
-  let frame;
-  if (era.saver === 'mystify') {
-    const mk = () => Array.from({ length: 4 }, () => ({ x: Math.random() * Wd, y: Math.random() * Ht, dx: (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1), dy: (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1) }));
-    const shapes = [{ p: mk(), h: 200 }, { p: mk(), h: 30 }];
-    frame = () => {
-      g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, 0, Wd, Ht);
-      shapes.forEach(s => {
-        s.h = (s.h + 0.6) % 360;
-        s.p.forEach(v => { v.x += v.dx; v.y += v.dy; if (v.x < 0 || v.x > Wd) v.dx *= -1; if (v.y < 0 || v.y > Ht) v.dy *= -1; });
-        g.strokeStyle = `hsl(${s.h},100%,60%)`; g.lineWidth = 1.5; g.beginPath();
-        s.p.forEach((v, i) => i ? g.lineTo(v.x, v.y) : g.moveTo(v.x, v.y)); g.closePath(); g.stroke();
-      });
-    };
-  } else if (era.saver === 'bounce') {
-    const text = era.saverText; let x = Wd / 3, y = Ht / 3, dx = 2.2, dy = 1.8, h = 200;
-    g.font = '700 42px Tahoma, Verdana, sans-serif';
-    const tw = g.measureText(text).width;
-    frame = () => {
-      g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Ht);
-      x += dx; y += dy;
-      if (x < 0 || x + tw > Wd) { dx *= -1; h = (h + 67) % 360; x = Math.max(0, Math.min(x, Wd - tw)); }
-      if (y < 42 || y > Ht) { dy *= -1; h = (h + 67) % 360; y = Math.max(42, Math.min(y, Ht)); }
-      g.font = '700 42px Tahoma, Verdana, sans-serif'; g.fillStyle = `hsl(${h},90%,60%)`; g.fillText(text, x, y);
-    };
-  } else {
-    const cx = Wd / 2, cy = Ht / 2;
-    const stars = Array.from({ length: 220 }, () => ({ x: (Math.random() - 0.5) * Wd, y: (Math.random() - 0.5) * Ht, z: Math.random() * Wd }));
-    frame = () => {
-      g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Ht);
-      stars.forEach(s => {
-        s.z -= 6; if (s.z < 1) { s.z = Wd; s.x = (Math.random() - 0.5) * Wd; s.y = (Math.random() - 0.5) * Ht; }
-        const k = 200 / s.z, x = cx + s.x * k, y = cy + s.y * k, sz = Math.max(1, 3 - s.z / 250);
-        g.fillStyle = s.z < 200 ? '#fff' : '#aaa'; g.fillRect(x, y, sz, sz);
-      });
-    };
-  }
+  const ink = era.shell === 'dos' ? (era.walls.find(w => w[0] === eraCfg().wall) || era.walls[0])[1] : null;
+  const frame = SAVERS[kind || saverKind()].make(g, Wd, Ht, ink);
   const loop = () => { frame(); if (saverOn) saverRAF = requestAnimationFrame(loop); };
   loop();
 }
