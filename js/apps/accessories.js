@@ -1017,6 +1017,7 @@
         <button class="btn" data-a="rnd" aria-label="Random order">${cdIco('rnd')}</button><button class="btn" data-a="eject" aria-label="Eject">${cdIco('eject')}</button>
       </div>
       <div class="acd-info"><div><b>Artist:</b> <span class="acd-ar"></span></div><div><b>Title:</b> <span class="acd-ti"></span></div></div>
+      ${E === '2000' ? '<div class="acd-rip"><button class="btn" data-rip>Copy track to Jukebox (MP3)</button><span class="acd-ripst"></span></div>' : ''}
       <div class="acd-vol"><label for="acd-v">Volume</label><input id="acd-v" type="range" min="0" max="100" step="5"></div>
       <div class="acd-list sunken" role="listbox" aria-label="Tracks"></div>
     </div>`;
@@ -1087,6 +1088,25 @@
       else if (k === 'rnd') { P.random = !P.random; shuffle(); persist(); render(); }
       else if (k === 'eject') eject();
     });
+    // 2000: "rip" a track to MP3 so it shows up in the Jukebox (the engine reads app:cdplayer:ripped).
+    let ripT = 0;
+    const ripped = () => api.load('ripped', []);
+    function rip() {
+      if (ripT || ejected) return;
+      const t = TRACKS[tr], st = $('.acd-ripst'), btn = $('[data-rip]');
+      if (ripped().some(r => r.t === t.name)) { st.textContent = `"${t.name}" is already in the Jukebox.`; return; }
+      const secs = Math.max(3, Math.round(t.len / 8)); let n = 0; btn.disabled = true;
+      ripT = setInterval(() => {
+        n++; if (n % 2) api.sfx.seek(1);
+        st.textContent = `Ripping "${t.name}" at 8x... ${Math.min(100, Math.round(n / (secs * 4) * 100))}%`;
+        if (n >= secs * 4) {
+          clearInterval(ripT); ripT = 0; btn.disabled = false;
+          api.save('ripped', ripped().concat([{ a: ALBUM.artist, t: t.name, len: mmss(t.len).replace(/^0/, ''), song: t.song }]));
+          st.textContent = `Done! "${t.name}" is now an MP3 in your Jukebox.`; api.sfx.ding(); api.stamp('mp3-rip');
+        }
+      }, 250);
+    }
+    if (E === '2000') $('[data-rip]').onclick = rip;
     $('#acd-v').addEventListener('input', e => {
       P.vol = +e.target.value; persist();
       clearTimeout(vt); vt = setTimeout(() => { if (state === 'play') startMusic(); }, 180);
@@ -1097,6 +1117,7 @@
         { label: state === 'play' ? 'Pause (Space)' : 'Play (Space)', fn: () => state === 'play' ? pause() : play(), disabled: ejected },
         { label: 'Stop (S)', fn: stop, disabled: ejected },
         { label: ejected ? 'Close Tray (E)' : 'Eject (E)', fn: eject },
+        ...(E === '2000' ? [{ label: 'Copy Track to Jukebox (MP3)', fn: rip, disabled: ejected || !!ripT }] : []),
         '-',
         { label: 'Exit', fn: () => api.close() }
       ] },
@@ -1117,7 +1138,7 @@
       else if (k === 'e') eject();
     };
     const iv = setInterval(tick, 100);
-    W.onClose = () => { clearInterval(iv); clearTimeout(vt); api.stopMusic(); };
+    W.onClose = () => { clearInterval(iv); clearTimeout(vt); clearInterval(ripT); api.stopMusic(); };
     W.onMin = () => { };
     shuffle(); render();
   }
@@ -1143,6 +1164,7 @@
     .acd-ctl .btn:disabled svg{opacity:.35}
     .acd-ctl [data-a=play]{color:#006000}
     .acd-ctl [data-a=stop],.acd-ctl [data-a=eject]{color:#000080}
+    .acd-rip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
     .acd-info{background:#fff;border:1px solid var(--dk);padding:3px 8px;font-size:12px}
     .acd-info div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .acd-vol{display:flex;align-items:center;gap:8px}
@@ -1471,7 +1493,7 @@
     { id: 'calendar', help: 'Keep track of birthdays and plans, month by month.', label: 'Calendar', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.calendar, window: { w: 600, h: 440 }, css: CAL_CSS, open: openCalendar },
     { id: 'cardfile', help: 'Index cards for addresses, recipes or anything you want to remember.', label: 'Cardfile', kind: 'builtin', cat: 'acc', eras: ['1990', '1995'], icon: ICON.cardfile, window: { w: 520, h: 400 }, css: CF_CSS, open: openCardfile },
     { id: 'clock', help: 'A clock with an alarm and a stopwatch.', label: 'Clock', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.clock, window: { w: 320, h: 400 }, css: CLOCK_CSS, open: openClock },
-    { id: 'cdplayer', help: 'Play the music CD in the drive, with shuffle and repeat.', label: 'CD Player', kind: 'builtin', cat: 'acc', eras: ['1995', '2000'], icon: ICON.cdplayer, window: { w: 420, h: 440 }, css: CD_CSS, open: openCD },
+    { id: 'cdplayer', get help() { return screenEra() === '2000' ? 'Play the music CD, or copy its songs to the Jukebox as MP3s.' : 'Play the music CD in the drive, with shuffle and repeat.'; }, label: 'CD Player', kind: 'builtin', cat: 'acc', eras: ['1995', '2000'], icon: ICON.cdplayer, window: { w: 420, h: 440 }, css: CD_CSS, open: openCD },
     { id: 'music', help: 'Compose your own songs on a grid of notes and play them back.', label: 'Music Maker', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.music, window: { w: 660, h: 470 }, css: MM_CSS, open: openMusic }
   );
 })();

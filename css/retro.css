@@ -725,3 +725,40 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .era-1985 .qh-page code{background:none;text-decoration:underline}
 .era-1985 .qh-page dt svg{display:none}
 .era-1985 .qh-nav{border-color:var(--phos,#33ff66)}
+
+/* ---- Time Traveler Passport ---- */
+.tpass{padding:10px;background:#f4ecd8;min-height:100%;color:#222}
+.tpass-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#1a3a8a;color:#f0d890;padding:8px 12px;border:2px solid #d8b84a}
+.tpass-hd b{display:block;letter-spacing:2px}.tpass-hd small{color:#fff}
+.tpass-n{text-align:right}.tpass-n b{display:inline;font-size:22px}
+.tpass-note{margin:8px 2px}
+.tpass-years{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:560px){.tpass-years{grid-template-columns:repeat(2,1fr)}}
+.tpass-year h4{margin:0 0 4px;text-align:center;border-bottom:1px dashed #a08040}
+.tpass-stamp{min-height:92px;margin:6px 0;padding:8px 6px;border:2px dashed #bbb;border-radius:50%/18%;text-align:center;color:#888;display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:11px}
+.tpass-stamp b{font-size:18px}
+.tpass-stamp.on{border:3px double #b02020;color:#b02020;transform:rotate(var(--r,0deg));background:rgba(176,32,32,.05)}
+.tpass-stamp.on span{font-weight:700}
+.era-1985 .tpass,.era-1985 .tpass-hd{background:#000;color:var(--phos,#33ff66);border-color:var(--phos,#33ff66)}
+.era-1985 .tpass-hd small{color:var(--phos,#33ff66)}
+.era-1985 .tpass-stamp,.era-1985 .tpass-stamp.on{color:var(--phos,#33ff66);border-color:var(--phos,#33ff66);background:none;border-radius:0}
+
+/* ---- Time Capsule ---- */
+.tc{padding:8px;display:flex;flex-direction:column;gap:8px}
+.tc fieldset{margin:0}
+.tc p{margin:4px 0}
+.tc textarea{width:100%;box-sizing:border-box;font:inherit}
+.tc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;flex-wrap:wrap}
+.tc ul{margin:4px 0;padding-left:18px}
+.tc-note{border-top:1px dotted #808080;padding:4px 0}
+.tc-note p{white-space:pre-wrap}
+.era-1985 .tc textarea,.era-1985 .tc select{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66)}
+
+/* ---- 2000: New Year's countdown party ---- */
+.y2k{position:absolute;inset:0;z-index:9000;background:#000014;color:#fff;display:grid;place-items:center;text-align:center}
+.y2k canvas{position:absolute;inset:0;width:100%;height:100%}
+.y2k-txt{position:relative;display:flex;flex-direction:column;gap:10px;padding:16px;font-family:var(--ui)}
+.y2k-txt small{color:#9cf;font-size:16px}
+.y2k-txt b{font:700 clamp(40px,10vw,96px)/1 Arial Black,Arial,sans-serif;color:#ffd700;text-shadow:0 0 18px #f0f,3px 3px 0 #800080}
+.y2k-txt span{font-size:18px;color:#cff}
+.y2k-skip{position:absolute;right:12px;bottom:12px}

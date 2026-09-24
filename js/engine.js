@@ -234,6 +234,8 @@ const net = { connected: false, since: 0, dropped: false, dropTimer: null };
 /* ---------- icons ---------- */
 const svg = (inner, vb = '0 0 32 32') => `<svg viewBox="${vb}" shape-rendering="crispEdges" aria-hidden="true">${inner}</svg>`;
 const ICONS = {
+  passport: svg('<rect x="6" y="3" width="20" height="26" rx="2" fill="#1a3a8a" stroke="#000"/><rect x="8" y="5" width="16" height="22" fill="none" stroke="#d8b84a"/><circle cx="16" cy="14" r="5" fill="none" stroke="#d8b84a" stroke-width="1.5"/><path d="M11 14h10M16 9v10" stroke="#d8b84a"/><rect x="11" y="22" width="10" height="2" fill="#d8b84a"/>'),
+  capsule: svg('<rect x="4" y="12" width="24" height="12" rx="6" fill="#c0c0c0" stroke="#000"/><rect x="4" y="12" width="12" height="12" rx="6" fill="#e05050" stroke="#000"/><rect x="10" y="12" width="6" height="12" fill="#e05050"/><path d="M16 12v12" stroke="#000"/><path d="M8 8l2 3M16 5v4M24 8l-2 3" stroke="#d8b84a" stroke-width="2"/>'),
   dial: svg('<rect x="3" y="17" width="26" height="10" fill="#c0c0c0" stroke="#000"/><rect x="4" y="18" width="24" height="1" fill="#fff"/><rect x="6" y="22" width="3" height="2" fill="#0c0"/><rect x="11" y="22" width="3" height="2" fill="#f00"/><rect x="16" y="22" width="3" height="2" fill="#ff0"/><rect x="21" y="21" width="5" height="4" fill="#808080"/><path d="M6 13 Q16 3 26 13 L26 16 L21 16 L21 13 Q16 10 11 13 L11 16 L6 16 Z" fill="#000"/>'),
   web: svg('<circle cx="16" cy="16" r="13" fill="#0050c8" stroke="#000"/><path d="M8 9h7v4h-3v5H8zM18 7h5v3h3v6h-4v-3h-4zM14 20h6v6h-4v-2h-2zM24 19h3l-2 5h-1z" fill="#1ca01c"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="#9cf" stroke-width=".8"/><line x1="3" y1="16" x2="29" y2="16" stroke="#9cf" stroke-width=".8"/>'),
   mines: svg('<g stroke="#000" stroke-width="2"><line x1="16" y1="3" x2="16" y2="29"/><line x1="3" y1="16" x2="29" y2="16"/><line x1="7" y1="7" x2="25" y2="25"/><line x1="25" y1="7" x2="7" y2="25"/></g><circle cx="16" cy="16" r="9" fill="#000"/><rect x="11" y="11" width="4" height="4" fill="#fff"/>'),
@@ -489,7 +491,9 @@ const APP_DEFS = {
   jb: () => ({ label: 'Jukebox', icon: 'jb', cat: 'main', open: () => openJukebox() }),
   store: () => ({ label: 'Software Store', icon: 'shop', cat: 'main', open: () => openStore() }),
   files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() }),
-  help: () => ({ label: 'Quick Help', icon: 'info', cat: 'main', open: () => openHelp() })
+  help: () => ({ label: 'Quick Help', icon: 'info', cat: 'main', open: () => openHelp() }),
+  passport: () => ({ label: 'Time Passport', icon: 'passport', cat: 'main', open: () => openPassport() }),
+  capsule: () => ({ label: 'Time Capsule', icon: 'capsule', cat: 'acc', open: () => openCapsule() })
 };
 
 /* Plug-in programs live in js/apps/*.js and register on window.RETRO_APPS.
@@ -508,7 +512,7 @@ const pluginRuns = p => p.kind === 'store' ? (p.year || 1990) <= era.year && isO
 const pluginDef = p => ({ id: p.id, label: p.label, icon: 'app-' + p.id, cat: p.cat || (p.kind === 'store' ? 'game' : 'game'), bought: p.kind === 'store', open: () => launchApp(p.id) });
 // Everything that runs in this year, in display order.
 function apps() {
-  const core = [...era.apps, 'store', 'files', 'help'].map(id => Object.assign({ id }, APP_DEFS[id]()));
+  const core = [...era.apps, 'store', 'files', 'passport', 'capsule', 'help'].map(id => Object.assign({ id }, APP_DEFS[id]()));
   return core.concat(Object.values(PLUGINS).filter(pluginRuns).map(pluginDef));
 }
 const findApp = id => apps().find(a => a.id === id);
@@ -529,7 +533,8 @@ function appApi(p, W) {
     dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
     openUrl: url => era.apps.includes('nv') ? openBrowser(url) : null,
-    openApp
+    openApp,
+    stamp: id => stamp(id)
   };
 }
 function launchApp(id) {
@@ -549,6 +554,34 @@ function launchApp(id) {
     const own = W.onClose;
     W.onClose = () => { const r = own && own(); if (r === false && !tearing) return false; stopMusic(p.id); };
   }});
+}
+
+
+/* Time Traveler Passport: one stamp for each year's signature activities. Apps call api.stamp(id).
+   Collecting every stamp pays a bonus. Add new stamps here (and to the Quick Help money page if they pay). */
+const STAMPS = [
+  { id: 'basic-run', year: 1985, label: 'Wrote a BASIC program', hint: 'Type a program in BASIC and RUN it.' },
+  { id: 'banner-print', year: 1985, label: 'Printed a banner', hint: 'Print a banner in Banner Maker.' },
+  { id: 'bbs-call', year: 1985, label: 'Called a bulletin board', hint: 'Dial a BBS with Terminal.' },
+  { id: 'mouse-grad', year: 1990, label: 'Mastered the mouse', hint: 'Finish the Mouse Tutorial.' },
+  { id: 'mines-win', year: 1990, label: 'Cleared a minefield', hint: 'Win a game of Mines.' },
+  { id: 'ski-run', year: 1990, label: 'Finished a ski run', hint: 'Reach the bottom of a run in Slope Rider.' },
+  { id: 'pedia-look', year: 1995, label: 'Explored the CD-ROM', hint: 'Read 5 articles in RetroPedia.' },
+  { id: 'home-page', year: 1995, label: 'Built a home page', hint: 'Publish a page with Home Page Builder.' },
+  { id: 'chat-room', year: 1995, label: 'Joined a chat room', hint: 'Say hi in the Chat Room.' },
+  { id: 'mp3-rip', year: 2000, label: 'Ripped an MP3', hint: 'Copy a CD song to the Jukebox with CD Player.' },
+  { id: 'movie-make', year: 2000, label: 'Made a movie', hint: 'Save a movie in Movie Maker.' },
+  { id: 'games-room-win', year: 2000, label: 'Won online', hint: 'Win a game in the Games Room.' }
+];
+const PASSPORT_BONUS = 25;
+function stamp(id) {
+  const s = STAMPS.find(x => x.id === id); if (!s) return false;
+  const got = store.get('stamps', {}); if (got[id]) return false;
+  got[id] = Date.now(); store.set('stamps', got);
+  sfx.tada(); toast(`Passport stamp: ${s.label} (${s.year})!`);
+  if (STAMPS.every(x => got[x.id])) setTimeout(() => { earn(PASSPORT_BONUS, 'filling your Time Traveler Passport'); msgBox('Time Traveler Passport', `You collected every stamp from 1985 to 2000. You're an official Time Traveler!\n\nHere's a ${money(PASSPORT_BONUS)} bonus.`); }, 1200);
+  if (wins.passport && wins.passport.refresh) wins.passport.refresh();
+  return true;
 }
 
 /* play money */
@@ -666,7 +699,7 @@ function toggleCrt() { settings.crt = !settings.crt; screen.classList.toggle('cr
 /* Start-menu desktop (1995 and later) */
 function buildStartShell() {
   const grid = document.createElement('div'); grid.id = 'deskicons'; grid.setAttribute('role', 'list');
-  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store', 'help'];
+  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store', 'passport', 'help'];
   desk.forEach(id => grid.appendChild(iconButton(findApp(id), grid)));
   grid.appendChild(iconButton({ label: 'Games', icon: 'folder', open: () => openFolder('game') }, grid));
   layer.prepend(grid);
@@ -1297,7 +1330,9 @@ const CORE_HELP = {
   cp: 'Sound, screen color, screen savers, backups and the Time Machine.',
   store: 'Buy new games with your play money.',
   files: 'Look around the hard disk, including files you download.',
-  help: 'This guide.'
+  help: 'This guide.',
+  passport: 'Collect a stamp for each year\'s big moments. Fill it for a bonus.',
+  capsule: 'Write a message and bury it. It opens when you visit a later year.'
 };
 const helpLine = a => { const p = PLUGINS[a.id]; return (p && (p.help || p.tagline)) || CORE_HELP[a.id] || ''; };
 function openHelp(page) {
@@ -1326,7 +1361,7 @@ function openHelp(page) {
       + `<h4>Turning off</h4>` + li([`${dos ? 'Type <code>OFF</code>' : start ? 'Choose <b>Start, Shut Down</b>' : 'Click <b>Shut Down</b>'} to turn the computer off. Everything is saved.`, 'Tired of waiting at startup? The <b>Skip the startup</b> button jumps straight to the desktop.'])
     });
     out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
-      <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`])
+      <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
       + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
       + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To move your stuff to another computer or browser: <b>Control Panel, Backup &amp; restore</b>.'])
     });
@@ -1346,9 +1381,10 @@ function openHelp(page) {
     if (has('pagebuilder')) net.push('<b>Make your own home page</b> with Home Page Builder and share a link to it.');
     if (has('chat') || has('im')) net.push(`<b>${esc((findApp('chat') || findApp('im')).label)}:</b> chat with buddies. They're friendly computer characters, not real people. Never type your real name, address or phone number. (It gets blocked anyway.)`);
     if (has('terminal')) net.push('<b>Terminal</b> dials bulletin board systems (BBSes): other people\'s computers you call on the phone to read messages, play games and swap files. The Web hasn\'t been invented yet!');
+    if (has('gamesroom')) net.push('<b>Games Room:</b> once you\'re online, play Backgammon, Spades or Dots and Boxes against computer players in a pretend online lobby. Wins earn money.');
     if (has('jb')) net.push('<b>Jukebox</b> plays songs, including ones you download from the Web.');
     if (net.length) out.push({ t: dos ? 'Calling other computers' : 'Going online', h: li(net) });
-    out.push({ t: 'Have fun!', h: `<p class="qh-big">That's it. Go explore ${Y}!</p>` + li([`Open this guide again any time: ${dos ? 'type <code>GUIDE</code> or pick it in the MENU' : start ? 'Start, Quick Help, or the Quick Help icon' : 'the Quick Help icon, or Help, Quick Help in Program Manager'}.`, 'For more history and tips, read <b>Read Me First</b>' + (dos ? ' (<code>TYPE README.TXT</code>)' : '') + '.', 'Each year has its own guide, and it opens the first time you visit.']) });
+    out.push({ t: 'Have fun!', h: `<p class="qh-big">That's it. Go explore ${Y}!</p>` + li([`Open this guide again any time: ${dos ? 'type <code>GUIDE</code> or pick it in the MENU' : start ? 'Start, Quick Help, or the Quick Help icon' : 'the Quick Help icon, or Help, Quick Help in Program Manager'}.`, 'For more history and tips, read <b>Read Me First</b>' + (dos ? ' (<code>TYPE README.TXT</code>)' : '') + '.', 'Each year has its own guide, and it opens the first time you visit.', 'Try the <b>Time Passport</b>: each year has stamps to collect. And write a <b>Time Capsule</b> message: it opens when you travel to a later year.']) });
     return out;
   };
   const W = openWin({ id: 'help', title: 'Quick Help', icon: 'info', w: 560, h: 440, center: true, build(W) {
@@ -1371,6 +1407,95 @@ function openHelp(page) {
   }});
   if (page != null && W.show) W.show(page);
   return W;
+}
+
+/* ---------- Time Traveler Passport: stamps for each year's signature activities ---------- */
+function openPassport() {
+  return openWin({ id: 'passport', title: 'Time Traveler Passport', icon: 'passport', w: 600, h: 460, build(W) {
+    W.refresh = () => {
+      const got = store.get('stamps', {}), n = STAMPS.filter(x => got[x.id]).length;
+      W.body.innerHTML = `<div class="tpass"><div class="tpass-hd"><div><b>TIME TRAVELER PASSPORT</b><small>Holder: ${esc(store.get('user', 'kidsurfer'))}</small></div><div class="tpass-n"><b>${n}</b> of ${STAMPS.length} stamps</div></div>
+        <p class="tpass-note">${n === STAMPS.length ? 'Every stamp collected. You\'re an official Time Traveler!' : `Visit each year and do its big things to earn stamps. Collect all ${STAMPS.length} for a ${money(PASSPORT_BONUS)} bonus.`}</p>
+        <div class="tpass-years">${ERA_IDS.map(id => `<section class="tpass-year"><h4>${ERAS[id].year}</h4>${STAMPS.filter(x => String(x.year) === id).map(x => got[x.id]
+          ? `<div class="tpass-stamp on" style="--r:${(x.id.length * 7 % 13) - 6}deg"><b>${x.year}</b><span>${esc(x.label)}</span><small>${new Date(got[x.id]).toLocaleDateString()}</small></div>`
+          : `<div class="tpass-stamp"><b>?</b><span>${esc(x.hint)}</span></div>`).join('')}</section>`).join('')}</div></div>`;
+    };
+    W.refresh();
+  }});
+}
+
+/* ---------- Time Capsule: bury a note in one year, dig it up in a later one ---------- */
+function openCapsule() {
+  return openWin({ id: 'capsule', title: 'Time Capsule', icon: 'capsule', w: 460, h: 440, build(W) {
+    W.refresh = () => {
+      const all = store.get('capsules', []), later = ERA_IDS.filter(id => ERAS[id].year > era.year);
+      const sealed = all.filter(c => !c.opened), opened = all.filter(c => c.opened);
+      W.body.innerHTML = `<div class="tc">
+        <fieldset><legend>Bury a time capsule</legend>${later.length
+          ? `<p>Write a message to your future self. It stays sealed until you visit a later year.</p><textarea maxlength="400" rows="4" aria-label="Your message" placeholder="Dear future me..."></textarea>
+             <div class="tc-row"><label>Open it in <select>${later.map(id => `<option value="${id}">${ERAS[id].year}</option>`).join('')}</select></label><button class="btn" data-bury>Bury it</button></div>`
+          : '<p>2000 is as far as this time machine goes. Capsules you bury in earlier years get dug up here!</p>'}</fieldset>
+        <fieldset><legend>Still buried (${sealed.length})</legend>${sealed.length ? '<ul>' + sealed.map(c => `<li>From ${ERAS[c.from] ? ERAS[c.from].year : c.from}, opens in <b>${ERAS[c.to] ? ERAS[c.to].year : c.to}</b>. Sealed!</li>`).join('') + '</ul>' : '<p>None yet.</p>'}</fieldset>
+        <fieldset><legend>Dug up (${opened.length})</legend>${opened.length ? opened.slice().reverse().map(c => `<div class="tc-note"><small>Buried in ${ERAS[c.from] ? ERAS[c.from].year : c.from}, opened in ${ERAS[c.openedIn] ? ERAS[c.openedIn].year : c.openedIn}</small><p></p></div>`).join('') : '<p>None yet.</p>'}</fieldset></div>`;
+      // User text goes in with textContent, never as HTML.
+      $$('.tc-note p', W.body).forEach((p, i) => { p.textContent = opened.slice().reverse()[i].text; });
+      const b = W.body.querySelector('[data-bury]');
+      if (b) b.onclick = () => {
+        const text = W.body.querySelector('textarea').value.trim(), to = W.body.querySelector('select').value;
+        if (!text) { msgBox('Time Capsule', 'Write a message first!'); return; }
+        store.set('capsules', store.get('capsules', []).concat([{ from: era.id, to, text, made: Date.now(), opened: false }]));
+        sfx.seek(8); toast(`Time capsule buried! Travel to ${ERAS[to].year} to dig it up.`); W.refresh();
+      };
+    };
+    W.refresh();
+  }});
+}
+// On arriving in a year, open every capsule meant for this year or earlier, one message at a time.
+async function digCapsules() {
+  const all = store.get('capsules', []), due = all.filter(c => !c.opened && ERAS[c.to] && ERAS[c.to].year <= era.year);
+  if (!due.length) return;
+  due.forEach(c => { c.opened = true; c.openedIn = era.id; });
+  store.set('capsules', all);
+  for (const c of due) {
+    if (!booted) return;
+    sfx.tada();
+    await msgBox('Time Capsule', `You dug up a time capsule you buried in ${ERAS[c.from] ? ERAS[c.from].year : c.from}!\n\n"${c.text}"`);
+  }
+  earn(2, 'digging up a time capsule');
+  if (wins.capsule && wins.capsule.refresh) wins.capsule.refresh();
+}
+
+/* ---------- 2000: a one-time New Year's countdown party the first time you visit ---------- */
+function y2kParty(done) {
+  const el = document.createElement('div'); el.className = 'y2k'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Happy New Year 2000');
+  el.innerHTML = `<canvas></canvas><div class="y2k-txt"><small>December 31, 1999 &middot; 11:59 PM</small><b>10</b><span>Will the Y2K bug crash every computer at midnight?</span></div><button class="btn y2k-skip">Skip</button>`;
+  layer.appendChild(el);
+  const cv = el.querySelector('canvas'), g = cv.getContext('2d'), big = el.querySelector('b'), sub = el.querySelector('span'), sm = el.querySelector('small');
+  const size = () => { cv.width = el.clientWidth; cv.height = el.clientHeight; }; size();
+  let n = 10, raf = 0, sparks = [], over = false, t1 = 0, t2 = 0;
+  const finish = () => { if (over) return; over = true; clearInterval(t1); clearTimeout(t2); cancelAnimationFrame(raf); el.remove(); done && done(); };
+  el.querySelector('.y2k-skip').onclick = finish;
+  const burst = () => {
+    const x = Math.random() * cv.width, y = cv.height * (0.15 + Math.random() * 0.4), h = Math.random() * 360;
+    for (let i = 0; i < 40; i++) { const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 3; sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 60, h }); }
+    noise(0.25, { ft: 'lowpass', f: 900, vol: 0.12, decay: 1 });
+  };
+  const draw = () => {
+    g.fillStyle = 'rgba(0,0,20,.25)'; g.fillRect(0, 0, cv.width, cv.height);
+    sparks = sparks.filter(p => --p.life > 0);
+    sparks.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.04; g.fillStyle = `hsl(${p.h},100%,${40 + p.life}%)`; g.fillRect(p.x, p.y, 2, 2); });
+    raf = requestAnimationFrame(draw);
+  };
+  draw();
+  t1 = setInterval(() => {
+    n--;
+    if (n > 0) { big.textContent = n; sfx.blip(n > 3 ? 660 : 990); return; }
+    clearInterval(t1);
+    big.textContent = 'HAPPY NEW YEAR 2000!'; sm.textContent = 'January 1, 2000 · 12:00 AM';
+    sub.textContent = 'Y2K bug check: all systems OK. The world did not end!';
+    sfx.tada(); for (let i = 0; i < 6; i++) setTimeout(burst, i * 450);
+    t2 = setTimeout(finish, 5200);
+  }, 1000);
 }
 
 function openSettings() {
@@ -1479,7 +1604,7 @@ function openMines() {
       sfx.tada();
       const best = store.get('minesBest', null);
       if (!best || secs < best) store.set('minesBest', secs);
-      earn(5, 'winning Mines');
+      earn(5, 'winning Mines'); stamp('mines-win');
       setTimeout(() => msgBox('Mines', `You cleared the field in ${secs} seconds!` + (best && secs >= best ? `\nYour best is ${best} seconds.` : '\nThat\'s a new best time.')), 400);
     }
     let press = null, suppress = false;
@@ -1750,6 +1875,7 @@ function openChat(cfg) {
       let shown = text;
       if (BB) { try { const f = BB.filter(text); if (f.flagged || f.pii) shown = f.clean; } catch (e) {} }
       if (cfg.mode === 'room') {
+        stamp('chat-room');
         line('#room', me(), ' ' + shown, '#000080');
         let name = null; if (BB) { try { name = BB.pickResponder(text, cfg.bots); } catch (e) {} }
         const b = cfg.bots.find(x => x.n === name) || pick(cfg.bots);
@@ -1779,7 +1905,7 @@ function openJukebox(autoplay) {
     W.body.innerHTML = `<div class="jb"><div class="scr"><canvas width="60" height="22"></canvas><div class="now"><b data-t>Nothing playing</b><span data-s>Pick a song below</span></div></div><div class="ctl"><button data-a="play">▶ Play</button><button data-a="stop">■ Stop</button><button data-a="next">▶▶ Next</button></div><ol></ol></div>`;
     const ol = W.body.querySelector('ol'), tEl = W.body.querySelector('[data-t]'), sEl = W.body.querySelector('[data-s]'), cv = W.body.querySelector('canvas'), g = cv.getContext('2d');
     let idx = -1, raf = 0, started = 0;
-    const list = () => era.songs.filter(s => !s.locked || estore.get('got:' + s.locked, false));
+    const list = () => era.songs.filter(s => !s.locked || estore.get('got:' + s.locked, false)).concat(store.get('app:cdplayer:ripped', []));
     function renderList() {
       ol.innerHTML = '';
       list().forEach((s, i) => {
@@ -1847,6 +1973,46 @@ const SAVERS = {
       g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(0, 0, W, H);
       g.fillStyle = ink || '#3f6'; g.font = `${fs}px VT323, "Courier New", monospace`;
       drops.forEach((d, i) => { g.fillText(pick(chars), i * fs, d * fs); drops[i] = d * fs > H && Math.random() > 0.97 ? 0 : d + 1; });
+    };
+  } },
+  maze: { name: '3D Maze', from: 1995, make(g, W, H) {
+    // A random maze explored with the right-hand rule, drawn with a simple raycaster.
+    const N = 13, M = Array.from({ length: N }, () => Array(N).fill(1));
+    const carve = (x, y) => { M[y][x] = 0; [[1, 0], [-1, 0], [0, 1], [0, -1]].sort(() => Math.random() - 0.5).forEach(([dx, dy]) => { const nx = x + dx * 2, ny = y + dy * 2; if (nx > 0 && ny > 0 && nx < N - 1 && ny < N - 1 && M[ny][nx]) { M[y + dy][x + dx] = 0; carve(nx, ny); } }); };
+    carve(1, 1);
+    const D = [[1, 0], [0, 1], [-1, 0], [0, -1]], open = (x, y) => M[y] && M[y][x] === 0;
+    let cx = 1, cy = 1, d = 0, px = 1.5, py = 1.5, ang = 0, act = null;
+    const next = () => {
+      for (const t of [1, 0, 3, 2]) { const nd = (d + t) % 4; if (open(cx + D[nd][0], cy + D[nd][1])) {
+        if (t === 0) return { kind: 'move' };
+        d = nd; return { kind: 'turn', to: nd * Math.PI / 2, then: true };
+      } }
+    };
+    const col = 4, fov = Math.PI / 3;
+    return () => {
+      if (!act) act = next();
+      if (act.kind === 'turn') {
+        let diff = act.to - ang; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        if (Math.abs(diff) < 0.06) { ang = act.to; act = { kind: 'move' }; } else ang += Math.sign(diff) * 0.06;
+      } else {
+        const tx = cx + D[d][0] + 0.5, ty = cy + D[d][1] + 0.5;
+        px += (tx - px) * 0.08 + Math.sign(tx - px) * 0.01; py += (ty - py) * 0.08 + Math.sign(ty - py) * 0.01;
+        if (Math.abs(tx - px) < 0.03 && Math.abs(ty - py) < 0.03) { px = tx; py = ty; cx += D[d][0]; cy += D[d][1]; act = null; }
+      }
+      g.fillStyle = '#10205a'; g.fillRect(0, 0, W, H / 2); g.fillStyle = '#5a5a5a'; g.fillRect(0, H / 2, W, H / 2);
+      for (let x = 0; x < W; x += col) {
+        const a = ang - fov / 2 + fov * x / W, rx = Math.cos(a), ry = Math.sin(a);
+        let mx = Math.floor(px), my = Math.floor(py), side = 0;
+        const ddx = Math.abs(1 / rx), ddy = Math.abs(1 / ry), sx = rx < 0 ? -1 : 1, sy = ry < 0 ? -1 : 1;
+        let sdx = (rx < 0 ? px - mx : mx + 1 - px) * ddx, sdy = (ry < 0 ? py - my : my + 1 - py) * ddy;
+        for (let i = 0; i < 64; i++) { if (sdx < sdy) { sdx += ddx; mx += sx; side = 0; } else { sdy += ddy; my += sy; side = 1; } if (!open(mx, my)) break; }
+        const dist = (side ? sdy - ddy : sdx - ddx) * Math.cos(a - ang), h = Math.min(H * 2, H / Math.max(0.05, dist));
+        const hit = side ? px + dist / Math.cos(a - ang) * rx : py + dist / Math.cos(a - ang) * ry, u = hit - Math.floor(hit);
+        const brick = (u * 4 | 0) % 2 ? 1 : 0.88, shade = Math.max(0.25, 1 - dist / 9) * (side ? 0.8 : 1) * brick;
+        g.fillStyle = `rgb(${170 * shade | 0},${70 * shade | 0},${50 * shade | 0})`;
+        g.fillRect(x, (H - h) / 2, col, h);
+        g.fillStyle = `rgba(0,0,0,${0.25 * shade})`; g.fillRect(x, (H - h) / 2 + h * 0.5, col, 1);
+      }
     };
   } },
   mystify: { name: 'Mystery lines', from: 1990, make(g, W, H) {
@@ -2445,7 +2611,11 @@ function finishDesk() {
   const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
   if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
   // First visit to this year: the Quick Help guide (it replaces the old automatic Read Me).
-  if (!estore.get('seenHelp', false)) { estore.set('seenHelp', true); estore.set('seenReadme', true); setTimeout(() => { if (booted) openHelp(); }, 600); }
+  const firstHelp = !estore.get('seenHelp', false);
+  if (firstHelp) { estore.set('seenHelp', true); estore.set('seenReadme', true); }
+  const afterParty = () => { if (!booted) return; if (firstHelp) openHelp(); digCapsules(); };
+  if (era.id === '2000' && !estore.get('y2kParty', false)) { estore.set('y2kParty', true); setTimeout(() => { if (booted) y2kParty(afterParty); }, 500); }
+  else setTimeout(afterParty, 600);
 }
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };

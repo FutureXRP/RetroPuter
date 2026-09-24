@@ -907,7 +907,7 @@ every life form, including new users.
             return;
           }
           busyRun = 0;
-          dialing = false; online = true; cur.start = Date.now();
+          dialing = false; online = true; cur.start = Date.now(); api.stamp('bbs-call');
           printNow(baud === 1200 ? 'CONNECT 1200\n' : 'CONNECT\n');
           api.sfx.blip(1320);
           status();
