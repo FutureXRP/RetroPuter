@@ -825,9 +825,9 @@
     { n: 'The Human Body', t: 'science', c: [
       ['This organ pumps blood all through your body.', 'The heart|heart'],
       ['This is the largest organ of the human body, and it covers you from head to toe.', 'Skin'],
-      ['The femur, the longest bone in your body, is in this part of your leg.', 'The thigh|thigh|upper leg|leg'],
+      ['The femur, the longest bone in your body, is in this part of your leg.', 'The thigh|thigh|upper leg'],
       ['A full set of adult teeth, including the wisdom teeth, numbers this many.', '32|thirty two|thirty-two'],
-      ['These tiny air sacs in the lungs are where oxygen passes into the blood.', 'Alveoli|alveolus|alveolar sacs|air sacs']] },
+      ['These tiny air sacs in the lungs are where oxygen passes into the blood.', 'Alveoli|alveolus|alveolar sacs']] },
     { n: 'Chemistry Set', t: 'science', c: [
       ['The letter O on the periodic table stands for this element we breathe.', 'Oxygen'],
       ['Au is the chemical symbol for this precious yellow metal.', 'Gold'],
@@ -941,7 +941,7 @@
       ['Spaghetti, lasagna and gelato come from this country.', 'Italy'],
       ['Paella, a rice dish often made with seafood, comes from this country.', 'Spain'],
       ['Haggis is a traditional dish of this country in the United Kingdom.', 'Scotland'],
-      ['Kimchi, a spicy fermented cabbage dish, is a staple food of this country.', 'Korea|south korea']] },
+      ['Kimchi, a spicy fermented cabbage dish, is a staple food of this country.', 'Korea|south korea|north korea']] },
     { n: 'Words & Spelling', t: 'words', c: [
       ['It is the opposite of hot.', 'Cold'],
       ['It is the only vowel in the word "strength."', 'E|the letter e'],
@@ -1003,7 +1003,7 @@
       ['This number system that computers use has only two digits, 0 and 1.', 'Binary'],
       ['Eight bits make up one of these.', 'Byte']] },
     { n: 'Computer Words', t: 'computers', c: [
-      ['A mistake in a computer program is named after this kind of creepy-crawly.', 'A bug|bug|insect'],
+      ['A mistake in a computer program is named after this kind of creepy-crawly.', 'A bug|bug'],
       ['A computer program that copies itself and spreads to other computers is named after this kind of germ.', 'A virus|virus'],
       ['A high-density 3.5-inch one of these holds 1.44 megabytes.', 'Floppy disk|floppy|diskette|disk|floppy disc'],
       ['This device lets computers talk over telephone lines, and it screeches when it connects.', 'Modem'],
@@ -1068,7 +1068,7 @@
       ['In Y2K, the K stands for this metric prefix meaning one thousand.', 'Kilo|thousand'],
       ['The "Y2K bug" worried people because old computers might read the year 2000 as this year.', '1900|nineteen hundred'],
       ['In 1999, many European countries launched this shared currency.', 'The euro|euro'],
-      ['A web address ending in ".com" is usually this kind of site, which is what "com" is short for.', 'Commercial|commerce|company']] }
+      ['A web address ending in ".com" is usually this kind of site, which is what "com" is short for.', 'Commercial|commerce']] }
   ];
 
   /* Last Call clues: [category, clue, answers] */
