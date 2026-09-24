@@ -1566,6 +1566,30 @@ function openChat(cfg) {
     const timers = []; let ambient = null, alive = true, online = false;
     const later = (ms, fn) => timers.push(setTimeout(() => alive && fn(), ms));
     const logs = {}; let cur = cfg.mode === 'room' ? '#room' : null; const unread = new Set();
+    // Buddy Brain (js/buddybrain.js): offline rule-based buddies with memory, learning and safety filters.
+    const BB = window.BuddyBrain, brains = {};
+    const noASL = l => !/a\s*\/\s*s\s*\/\s*l|\d+\s*\/\s*[mf]\s*\//i.test(l);
+    const brainFor = b => {
+      if (!BB) return null;
+      if (!(b.n in brains)) {
+        try { brains[b.n] = BB.create({ bot: b, era: { id: era.id, year: era.year }, user: me(), mode: cfg.mode, others: cfg.bots.map(x => x.n).filter(n => n !== b.n), store: { get: (k, d) => store.get(k, d), set: (k, v) => store.set(k, v) }, cfg }); }
+        catch (e) { console.error(e); brains[b.n] = null; }
+      }
+      return brains[b.n];
+    };
+    const hello = b => { const br = brainFor(b); try { if (br) return br.greet(); } catch (e) {} return subst(pick(b.hello)); };
+    const chatter = (b, ambientOnly) => { const br = brainFor(b); let t = null; try { t = br && br.idle(); } catch (e) {} if (t) return t; if (ambientOnly) return null; const pool = (b.lines || []).filter(noASL); return pool.length ? subst(pick(pool)) : null; };
+    const replies = (b, text) => { const br = brainFor(b); try { if (br) return br.respond(text); } catch (e) { console.error(e); } return [{ text: subst(botReply(b, text, cfg)), delay: 1500 + Math.random() * 2000 }]; };
+    // Show a buddy's replies one after another, with a typing indicator while they "type".
+    function deliver(b, list, where) {
+      let t = 0;
+      (list || []).forEach(r => {
+        const d = Math.max(400, r.delay || 1500);
+        later(t + 250, () => { if (online && (cfg.mode === 'room' || cur === b.n)) typing.textContent = b.n + ' is typing…'; });
+        t += d;
+        later(t, () => { if (!online) return; if (typing.textContent.startsWith(b.n)) typing.textContent = ''; if (cfg.mode === 'room') { line(where, b.n, ' ' + r.text, b.c); sfx.blip(700); } else incoming(b, r.text); });
+      });
+    }
     function line(where, who, text, color, sys) {
       (logs[where] = logs[where] || []).push({ who, text, color, sys });
       if (logs[where].length > 150) logs[where].shift();
@@ -1596,15 +1620,16 @@ function openChat(cfg) {
       if (cfg.mode === 'room') {
         sfx.door();
         line('#room', '', `*** You (${me()}) have entered ${cfg.room} ***`, null, true);
-        cfg.bots.slice(0, 3).forEach((b, i) => later(1200 + i * 1500, () => { line('#room', b.n, ' ' + subst(pick(b.hello)), b.c); sfx.blip(700 + i * 90); }));
-        const amb = () => { ambient = setTimeout(() => { if (!alive || !online) return; const b = pick(cfg.bots); line('#room', b.n, ' ' + subst(pick(b.lines)), b.c); sfx.blip(620); amb(); }, 5000 + Math.random() * 6000); };
+        line('#room', '', 'Everyone here is a friendly computer character. Never share your real name, address or phone number online.', null, true);
+        cfg.bots.slice(0, 3).forEach((b, i) => later(1200 + i * 1500, () => { line('#room', b.n, ' ' + hello(b), b.c); sfx.blip(700 + i * 90); }));
+        const amb = () => { ambient = setTimeout(() => { if (!alive || !online) return; const b = pick(cfg.bots); const t = chatter(b); if (t) { line('#room', b.n, ' ' + t, b.c); sfx.blip(620); } amb(); }, 6000 + Math.random() * 7000); };
         amb();
       } else {
         sfx.door();
         cur = cfg.bots[0].n;
-        cfg.bots.forEach(b => line(b.n, '', `You're chatting with ${b.n}.${b.away ? ' Away message: "' + b.away + '"' : ''}`, null, true));
-        later(2500, () => { const b = cfg.bots[0]; incoming(b, subst(pick(b.hello))); });
-        const amb = () => { ambient = setTimeout(() => { if (!alive || !online) return; const b = pick(cfg.bots.filter(x => !x.away)); incoming(b, subst(pick(b.lines))); amb(); }, 16000 + Math.random() * 14000); };
+        cfg.bots.forEach(b => line(b.n, '', `You're chatting with ${b.n}, a friendly computer character.${b.away ? ' Away message: "' + b.away + '"' : ''}`, null, true));
+        later(2500, () => { const b = cfg.bots[0]; incoming(b, hello(b)); });
+        const amb = () => { ambient = setTimeout(() => { if (!alive || !online) return; const b = pick(cfg.bots.filter(x => !x.away)); const t = chatter(b, !!BB && Math.random() < 0.5); if (t) incoming(b, t); amb(); }, 16000 + Math.random() * 14000); };
         amb();
       }
       renderPeople(); render();
@@ -1625,16 +1650,19 @@ function openChat(cfg) {
       const text = input.value.trim(); if (!text) return;
       if (!online) { typing.textContent = cfg.offline; return; }
       input.value = ''; sfx.sent();
+      // What you typed is screened first: bad words are masked and personal info (numbers, emails) hidden in the log.
+      let shown = text;
+      if (BB) { try { const f = BB.filter(text); if (f.flagged || f.pii) shown = f.clean; } catch (e) {} }
       if (cfg.mode === 'room') {
-        line('#room', me(), ' ' + text, '#000080');
-        const b = pick(cfg.bots);
-        later(1200 + Math.random() * 2200, () => { if (online) { line('#room', b.n, ' ' + subst(botReply(b, text, cfg)), b.c); sfx.blip(700); } });
+        line('#room', me(), ' ' + shown, '#000080');
+        let name = null; if (BB) { try { name = BB.pickResponder(text, cfg.bots); } catch (e) {} }
+        const b = cfg.bots.find(x => x.n === name) || pick(cfg.bots);
+        deliver(b, replies(b, text), '#room');
       } else {
         const b = cfg.bots.find(x => x.n === cur); if (!b) return;
-        line(b.n, me(), ' ' + text, '#c00000');
+        line(b.n, me(), ' ' + shown, '#c00000');
         if (b.away) { later(600, () => { line(b.n, b.n, ' Auto-response: ' + b.away, b.c); sfx.msg(); }); return; }
-        later(700, () => { if (cur === b.n && online) typing.textContent = b.n + ' is typing…'; });
-        later(2200 + Math.random() * 2200, () => { if (!online) return; if (typing.textContent.startsWith(b.n)) typing.textContent = ''; incoming(b, subst(botReply(b, text, cfg))); });
+        deliver(b, replies(b, text), b.n);
       }
     };
     input.addEventListener('keydown', e => { if (e.key.length === 1) sfx.key(); });
@@ -2245,7 +2273,7 @@ async function runSponsor(sp, live) {
   box.href = sp.href; box.className = 'sp-box sp-' + sp.id; box.setAttribute('aria-label', (sp.label || 'Sponsor') + ' (advertisement)');
   if (sp.newTab !== false) { box.target = '_blank'; box.rel = 'sponsored noopener'; } else { box.removeAttribute('target'); box.rel = 'sponsored'; }
   box.innerHTML = sp.html(era);
-  const secs = Math.min(6, Math.max(2, sp.seconds || 4));
+  const secs = Math.min(10, Math.max(2, sp.seconds || 10));
   let done = false; skip.onclick = () => { done = true; sfx.click(); };
   const t0 = performance.now();
   while (!done && live()) {
@@ -2258,6 +2286,8 @@ async function runSponsor(sp, live) {
 }
 
 /* ---------- boot / shutdown ---------- */
+// How much to stretch each year's startup so power-on to desktop takes about 20 seconds (sponsor screen not included).
+const BOOT_PACE = { '1985': 2.35, '1990': 1.35, '1995': 1.86, '2000': 2.5 };
 let booted = false, skipping = false, bootTok = 0;
 const bios = $('#bios');
 async function boot() {
@@ -2268,19 +2298,21 @@ async function boot() {
   const spon = sponsorDue();
   show(spon ? 'st-sponsor' : 'st-bios'); powerAnim('poweron'); setLeds(true, true);
   const live = () => my === bootTok && !skipping;
+  // Each year's startup is stretched to take about BOOT_SECONDS from power-on to desktop.
+  const pace = BOOT_PACE[era.id] || 1;
   const B = {
     live, sfx, tone, bios,
-    wait: async ms => { await sleep(ms); return live(); },
+    wait: async ms => { await sleep(ms * pace); return live(); },
     async type(line, cls, delay = 0) {
       if (!live()) return;
       const span = document.createElement('span'); if (cls) span.className = cls; bios.appendChild(span);
       if (!delay) { span.textContent = line + '\n'; return; }
-      for (const ch of line) { if (!live()) return; span.textContent += ch; if (ch !== ' ') sfx.key(); await sleep(delay); }
+      for (const ch of line) { if (!live()) return; span.textContent += ch; if (ch !== ' ') sfx.key(); await sleep(delay * pace); }
       span.textContent += '\n';
     },
     async memTest(kb, stepKb, ms = 40) {
       const mem = document.createElement('span'); bios.appendChild(mem);
-      for (let k = 0; k <= kb; k += stepKb) { if (!live()) return false; mem.textContent = `Memory Test: ${String(k).padStart(6)}K`; if (k % (stepKb * 4) === 0) tone(1800, 0.01, { vol: 0.02 }); await sleep(ms); }
+      for (let k = 0; k <= kb; k += stepKb) { if (!live()) return false; mem.textContent = `Memory Test: ${String(k).padStart(6)}K`; if (k % (stepKb * 4) === 0) tone(1800, 0.01, { vol: 0.02 }); await sleep(ms * pace); }
       mem.textContent += ' OK\n'; return true;
     },
     prompt(text) { bios.appendChild(document.createTextNode(text)); },
