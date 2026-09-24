@@ -650,3 +650,22 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .rm-ad-box.s320{gap:6px;padding:0 6px}.s320.ad-house .hs-txt b{font-size:20px}.s320.ad-house .hs-txt span{font-size:12px}.s320.ad-house .hs-btn{font-size:14px;padding:2px 6px}
 @media (prefers-reduced-motion: reduce){.ad-house .hs-blink,.ad-house .hs-pc i{animation:none}}
 @media (max-height:720px){.rm-ui .power-box small{display:none}}
+
+/* ---- startup sponsor screen (inside the monitor) ---- */
+#st-sponsor{background:#000;display:none;place-items:center;padding:16px}
+#st-sponsor.on{display:grid}
+.sp-wrap{width:min(100%,600px);display:flex;flex-direction:column;align-items:center;gap:8px;font-family:var(--dos)}
+.sp-wrap > small{color:#aaa;font:16px var(--dos);letter-spacing:2px;text-transform:uppercase}
+.sp-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;min-height:300px;text-decoration:none;cursor:pointer;overflow:hidden;position:relative}
+.sp-box:focus-visible{outline:2px dashed #ffb000;outline-offset:3px}
+.sp-foot{display:flex;gap:8px;align-items:center;width:100%}
+.sp-bar{flex:1;height:12px;padding:1px;background:#222}
+.sp-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#aaa 0 8px,transparent 8px 10px)}
+.sp-skip{min-width:0;padding:3px 12px}
+/* house sponsor */
+.sp-box.sp-house{background:#000080 repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px);border:4px solid;border-color:#dfdfdf #404040 #404040 #dfdfdf;color:#fff;text-align:center;padding:16px}
+.sp-house .hsp-top{font-size:22px;color:#c0ffff}
+.sp-house .hsp-logo{font-size:64px;line-height:1;color:#ffff00;text-shadow:4px 4px 0 #800000;letter-spacing:2px}
+.sp-house .hsp-sub{font-size:22px}
+.sp-house .hsp-btn{margin-top:6px;background:#c0c0c0;color:#000;border:3px solid;border-color:#fff #404040 #404040 #fff;padding:6px 14px;font-size:20px;animation:blink 1.2s steps(1) infinite}
+@media (prefers-reduced-motion: reduce){.sp-house .hsp-btn{animation:none}}

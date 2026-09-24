@@ -270,7 +270,7 @@ const TB = {
 
 /* ---------- stages ---------- */
 const screen = $('#screen');
-const TW_STAGES = ['st-bios', 'st-splash', 'st-bye'];
+const TW_STAGES = ['st-sponsor', 'st-bios', 'st-splash', 'st-bye'];
 function show(id) {
   $$('.stage').forEach(s => s.classList.toggle('on', s.id === id));
   $('#tw-float').classList.toggle('on', TW_STAGES.includes(id));
@@ -2219,7 +2219,7 @@ async function zoomOut() {
 }
 function setLeds(on, busy) { room.classList.toggle('on', !!on); room.classList.toggle('busy', !!busy); }
 function roomPower() {
-  if (stageOn('st-bios') || stageOn('st-splash')) { // pressing power while it boots turns it off, like a real one
+  if (stageOn('st-sponsor') || stageOn('st-bios') || stageOn('st-splash')) { // pressing power while it boots turns it off, like a real one
     bootTok++; skipping = true; $('#skip').classList.remove('on');
     noise(0.06, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 }); setLeds(false); renderPower(); show('st-power'); return;
   }
@@ -2232,6 +2232,31 @@ function initRoom() {
   enterRoom();
 }
 
+/* ---------- startup sponsor: a short, skippable "brought to you by" screen at the first boot of a visit ---------- */
+// The sponsor comes from js/ads.js (window.RETRO_SPONSOR). It never repeats within the same browser tab session.
+function sponsorDue() {
+  const sp = window.RETRO_SPONSOR;
+  if (!sp || !sp.html || !sp.href) return null;
+  try { if (sessionStorage.getItem('r1990:sponsorShown')) return null; sessionStorage.setItem('r1990:sponsorShown', '1'); } catch (e) {}
+  return sp;
+}
+async function runSponsor(sp, live) {
+  const st = $('#st-sponsor'), box = st.querySelector('.sp-box'), bar = st.querySelector('.sp-bar i'), skip = st.querySelector('.sp-skip');
+  box.href = sp.href; box.className = 'sp-box sp-' + sp.id; box.setAttribute('aria-label', (sp.label || 'Sponsor') + ' (advertisement)');
+  if (sp.newTab !== false) { box.target = '_blank'; box.rel = 'sponsored noopener'; } else { box.removeAttribute('target'); box.rel = 'sponsored'; }
+  box.innerHTML = sp.html(era);
+  const secs = Math.min(6, Math.max(2, sp.seconds || 4));
+  let done = false; skip.onclick = () => { done = true; sfx.click(); };
+  const t0 = performance.now();
+  while (!done && live()) {
+    const f = Math.min(1, (performance.now() - t0) / (secs * 1000));
+    bar.style.width = (f * 100) + '%';
+    if (f >= 1) break;
+    await sleep(80);
+  }
+  return live();
+}
+
 /* ---------- boot / shutdown ---------- */
 let booted = false, skipping = false, bootTok = 0;
 const bios = $('#bios');
@@ -2240,7 +2265,8 @@ async function boot() {
   audio();
   bios.innerHTML = '';
   $('#skip').classList.add('on');
-  show('st-bios'); powerAnim('poweron'); setLeds(true, true);
+  const spon = sponsorDue();
+  show(spon ? 'st-sponsor' : 'st-bios'); powerAnim('poweron'); setLeds(true, true);
   const live = () => my === bootTok && !skipping;
   const B = {
     live, sfx, tone, bios,
@@ -2261,6 +2287,7 @@ async function boot() {
     clear(html = '') { bios.innerHTML = html; },
     splash() { if (!live()) return; show('st-splash'); sfx[era.sounds.start](); }
   };
+  if (spon) { if (!(await runSponsor(spon, live))) return; show('st-bios'); }
   const ok = await era.boot(B);
   if (ok && live()) toDesktop();
 }
@@ -2291,7 +2318,7 @@ function finishDesk() {
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };
 $('#pwr').onclick = () => {
-  if (booted || stageOn('st-bios') || stageOn('st-splash')) return;
+  if (booted || stageOn('st-sponsor') || stageOn('st-bios') || stageOn('st-splash')) return;
   audio();
   noise(0.08, { ft: 'lowpass', f: 300, vol: 0.6, decay: 1 });
   tone(55, 1.2, { type: 'sine', vol: 0.12, decay: 1 });
