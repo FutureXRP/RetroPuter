@@ -1766,7 +1766,8 @@ function buildDosShell() {
     ({ help: () => dosRun('HELP'), menu: dosMenu, dir: () => dosRun('DIR'), tm: () => openTW(el.querySelector('.dos-tm')), off: askShutdown })[b.dataset.k]();
   });
   dos.input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { const v = dos.input.value; dos.input.value = ''; dosRun(v); }
+    // Stop the Enter here so a program launched by it doesn't also receive it.
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const v = dos.input.value; dos.input.value = ''; dosRun(v); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (dos.hi > 0) dos.input.value = dos.hist[--dos.hi] || ''; }
     else if (e.key === 'ArrowDown') { e.preventDefault(); dos.hi = Math.min(dos.hist.length, dos.hi + 1); dos.input.value = dos.hist[dos.hi] || ''; }
     else if (e.key.length === 1 || e.key === 'Backspace') sfx.key();
