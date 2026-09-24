@@ -45,6 +45,7 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 - `api.setTitle(text)`, `api.close()`.
 - `api.earn(dollars, 'reason')`: give the player play money for a win (the engine caps it daily). Use small amounts ($2 to $10).
 - `api.online()`, `api.kbps()`: whether the modem is connected, and its speed.
+- `api.openUrl(url)`: open the year's web browser at a fake-web address.
 - `api.say(text, { rate, pitch, interrupt })`: read text aloud with the browser's speech voice (for pre-readers). Returns false if unavailable or muted, so always show the text on screen too.
 - `api.dial(number, onStatus, profile)`: play a real modem call (`profile` is `'v22'` for 300-2,400 bps). Returns `{ done: Promise<boolean>, cancel() }`. For programs that manage their own connection, like a 1985 terminal.
 - `api.user`: the player's user name.

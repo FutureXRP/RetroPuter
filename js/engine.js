@@ -527,6 +527,7 @@ function appApi(p, W) {
     say: (text, o = {}) => say(text, o),
     dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
+    openUrl: url => era.apps.includes('nv') ? openBrowser(url) : null,
     openApp
   };
 }
