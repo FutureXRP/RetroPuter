@@ -26,7 +26,7 @@ function page(url, h) {
         `<div>${BANNER}</div>`,
         `<h1>Welcome to PrairieNet!</h1><p>You are now connected to the <b>Information Superhighway</b>. From right here at your desk you can visit computers all over the world.</p>`,
         `<h2>What's New</h2><ul><li>${h.NEWGIF} ${A(SITES.kevin, "Kevin's Totally Rad Home Page")}, our member page of the week</li><li>${h.NEWGIF} ${A(SITES.news, 'The Daily Byte')} now updates every single week</li><li>Faster 9,600 bps lines in most area codes</li></ul>`,
-        `<h2>Start Exploring</h2><ul><li>${A(SITES.finder, 'WebFinder')}: find anything on the Net (all of it)</li><li>${A(SITES.news, 'The Daily Byte')}: computer news you can use</li><li>${A(SITES.shack, 'Shareware Shack')}: free games and programs to download</li><li>${A('http://www.prairienet.com/weather/', 'Local weather')}</li></ul>`,
+        `<h2>Start Exploring</h2><ul><li>${A(SITES.finder, 'WebFinder')}: find anything on the Net (all of it)</li><li>${A(SITES.news, 'The Daily Byte')}: computer news you can use</li><li>${A(SITES.shack, 'Shareware Shack')}: free games and programs to download</li><li>${A('http://www.prairienet.com/weather/', 'Local weather')}</li><li>${A('http://www.prairie-state.edu/~bpatel/cool.html', 'Cool Links')}: a list of every cool page on the Web</li><li>${A('http://www.jokeoftheday.com/', 'Joke of the Day')} and ${A('http://www.prairienet.com/bbs/', 'the Prairie Area BBS list')}</li></ul>`,
         `<hr><p>${h.CONSTRUCTION}</p><p>This page is always under construction. Please check back soon!</p>`,
         `<p>You are visitor number <span class="counter">${String(hits + 1).padStart(6, '0')}</span></p><address>Questions? Email webmaster@prairienet.com. Please do not call, you are using the phone line.</address>`
       ]};
@@ -42,7 +42,8 @@ function page(url, h) {
           e.preventDefault();
           const q = f.q.value.trim(); if (!q) return;
           const slug = q.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'nothing';
-          root.querySelector('[data-results]').innerHTML = `<h2>Results for "${esc(q)}"</h2><p>Found 3 matches in 4.2 seconds (very fast!)</p><ol><li>${A(SITES.kevin, "Kevin's Totally Rad Home Page")}: mentions "${esc(q)}" probably</li><li>${A(SITES.news, 'The Daily Byte')}</li><li>${A('http://www.' + slug + '.com/', 'www.' + esc(slug) + '.com')}</li></ol>`;
+          const found = h.search(q).slice(0, 8);
+          root.querySelector('[data-results]').innerHTML = `<h2>Results for "${esc(q)}"</h2><p>Found ${found.length + 3} matches in 4.2 seconds (very fast!)</p><ol>${found.map(e => `<li>${A(e.url, esc(e.title))}: ${esc(e.desc || '')}</li>`).join('')}<li>${A(SITES.kevin, "Kevin's Totally Rad Home Page")}: mentions "${esc(q)}" probably</li><li>${A(SITES.news, 'The Daily Byte')}</li><li>${A('http://www.' + slug + '.com/', 'www.' + esc(slug) + '.com')}</li></ol>`;
         };
       }};
     case SITES.kevin:

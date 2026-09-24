@@ -284,6 +284,7 @@ function applyWall() {
   desk.style.setProperty('--wall', w[1]);
   desk.style.background = w[1];
   desk.classList.toggle('weave', w[0] === 'weave');
+  screen.style.setProperty('--phos', w[1]);
 }
 
 /* ---------- window manager ---------- */
@@ -291,8 +292,11 @@ const layer = $('#layer');
 const wins = {};
 let zTop = 10, cascade = 0, tearing = false;
 function focusWin(W) {
+  // Keep window z-indexes well below menus (8000+) in long sessions by renumbering now and then.
+  if (zTop > 900) { zTop = 10; Object.values(wins).sort((a, b) => (a.el.style.zIndex % 7000) - (b.el.style.zIndex % 7000)).forEach(o => { o.el.style.zIndex = (o.modal ? 7000 : 0) + (++zTop); }); }
   Object.values(wins).forEach(o => o.el.classList.toggle('active', o === W));
-  if (W) { W.el.style.zIndex = ++zTop; W.el.classList.remove('min'); W.minimized = false; }
+  if (W) { W.el.style.zIndex = (W.modal ? 7000 : 0) + (++zTop); // dialogs always stay above ordinary windows
+    W.el.classList.remove('min'); W.minimized = false; if (dos && document.activeElement === dos.input) dos.input.blur(); }
   renderTasks();
 }
 function activeWin() { return Object.values(wins).find(o => o.el.classList.contains('active') && !o.minimized); }
@@ -310,6 +314,7 @@ function closeWin(W) {
   W.el.remove(); delete wins[W.id];
   const rest = Object.values(wins).filter(o => !o.minimized).sort((a, b) => b.el.style.zIndex - a.el.style.zIndex);
   focusWin(rest[0] || null);
+  if (!rest.length) dosFocus();
 }
 function closeAll() {
   tearing = true;
@@ -322,7 +327,7 @@ function openWin(o) {
   sfx.seek(4);
   document.body.classList.add('wait'); setTimeout(() => document.body.classList.remove('wait'), 450);
   const el = document.createElement('div');
-  el.className = 'win';
+  el.className = 'win' + (o.modal ? ' modal' : '');
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', o.title);
   el.innerHTML = `<div class="tb"><span class="ico">${ICONS[o.icon] || ''}</span><span class="t"></span>${o.noMin ? '' : '<button class="tbb" data-a="min" aria-label="Minimize">_</button>'}${o.fixed ? '' : '<button class="tbb" data-a="max" aria-label="Maximize">□</button>'}<button class="tbb x" data-a="close" aria-label="Close">×</button></div><div class="body"></div>${o.fixed ? '' : '<div class="grip" aria-hidden="true"></div>'}`;
   el.querySelector('.t').textContent = o.title;
@@ -462,6 +467,9 @@ document.addEventListener('keydown', e => {
   if (!stageOn('st-desk')) return;
   const W = activeWin();
   if (W && W.onKey) W.onKey(e);
+  // In 1985 every full-screen program exits with Esc (the status bar says so). A program can opt out with W.keepEsc.
+  if (era.shell === 'dos' && W && !W.modal && e.key === 'Escape' && !W.keepEsc) { e.preventDefault(); closeWin(W); }
+  if (era.shell === 'dos' && !W && /^F(1|2|3|10)$/.test(e.key)) { e.preventDefault(); ({ F1: () => dosRun('HELP'), F2: dosMenu, F3: () => dosRun('DIR'), F10: () => openTW(dos.el.querySelector('.dos-tm')) })[e.key](); }
 });
 $('#st-desk').addEventListener('pointerdown', () => sfx.click());
 
@@ -516,7 +524,10 @@ function appApi(p, W) {
     setTitle: t => setTitle(W, t), close: () => closeWin(W),
     playMusic: song => playMusic(song, p.id), stopMusic: () => stopMusic(p.id),
     earn: (amt, why) => earn(amt, why),
+    say: (text, o = {}) => say(text, o),
+    dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
+    openUrl: url => era.apps.includes('nv') ? openBrowser(url) : null,
     openApp
   };
 }
@@ -560,6 +571,16 @@ function allowance() {
   const first = store.get('allowanceDay', '') === '';
   store.set('allowanceDay', day);
   if (!first) { setWallet(wallet() + ALLOWANCE); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance. Spend it at the Software Store!`), 1500); }
+}
+// Read text aloud for young players (Web Speech API). Silent if unsupported or the volume is at zero.
+function say(text, o = {}) {
+  try {
+    if (!window.speechSynthesis || settings.vol <= 0) return false;
+    if (o.interrupt !== false) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.rate = o.rate || 1; u.pitch = o.pitch || 1.1; u.volume = Math.min(1, settings.vol * 1.4);
+    speechSynthesis.speak(u); return true;
+  } catch (e) { return false; }
 }
 let toastT = 0;
 function toast(text) {
@@ -828,7 +849,29 @@ const gb = {
   }
 };
 // Everything an era's page() function may use.
-const H = { A, APP: APPLINK, esc, store: estore, NEWGIF, CONSTRUCTION, rateKB, fmtTime, fmtBps, effBps, dlTable, bindDownloads, gb, playMusic, stopMusic, msgBox, openApp, get sites() { return era.sites; }, get user() { return store.get('user', 'kidsurfer'); }, conn };
+/* Extra fake-web pages live in js/web/*.js and register on window.RETRO_SITES:
+   { eras: ['1995', '2000'] or '*', url: 'http://…/' or match: url => bool, page: (url, h) => ({ title, cls, blocks, after }),
+     search: [{ title, url, desc, keywords }] }  (search entries feed each year's search engine through h.search) */
+const SITES = window.RETRO_SITES || [];
+const SHARE_URL = 'http://www.cyberburbs.com/shared/'; // where a shared home page (#year&page=…) is shown
+const siteOn = s => s.eras === '*' || (s.eras || []).includes(era.id);
+function sitePage(url) {
+  for (const s of SITES) if (siteOn(s) && (s.url ? s.url === url : s.match && s.match(url))) return s.page(url, H);
+  return null;
+}
+function siteSearch(q) {
+  const words = String(q).toLowerCase().split(/\W+/).filter(w => w.length > 1);
+  const out = [];
+  SITES.filter(siteOn).forEach(s => (s.search || []).forEach(e => {
+    const hay = (e.title + ' ' + (e.desc || '') + ' ' + (e.keywords || '')).toLowerCase();
+    const n = words.filter(w => hay.includes(w)).length;
+    if (n) out.push(Object.assign({ score: n }, e));
+  }));
+  return out.sort((a, b) => b.score - a.score);
+}
+// URL hash: #1995 or #1995&page=… (extra params are passed to pages, e.g. a shared home page)
+const HASH = (() => { const parts = location.hash.replace(/^#/, '').split('&'), o = { era: parts.shift() }; parts.forEach(p => { const i = p.indexOf('='); if (i > 0) o[decodeURIComponent(p.slice(0, i))] = decodeURIComponent(p.slice(i + 1)); }); return o; })();
+const H = { search: siteSearch, param: k => HASH[k], appLoad: (app, k, d) => store.get('app:' + app + ':' + k, d), era: () => ({ id: era.id, year: era.year }), A, APP: APPLINK, esc, store: estore, NEWGIF, CONSTRUCTION, rateKB, fmtTime, fmtBps, effBps, dlTable, bindDownloads, gb, playMusic, stopMusic, msgBox, openApp, get sites() { return era.sites; }, get user() { return store.get('user', 'kidsurfer'); }, conn };
 
 let music = null;
 function playMusic(song, owner = 'web') {
@@ -862,7 +905,7 @@ function playMusic(song, owner = 'web') {
 }
 function stopMusic(owner) { if (music && (!owner || music.owner === owner)) { music.stop(); music = null; } }
 
-function openBrowser() {
+function openBrowser(startUrl) {
   const B = era.browser;
   const W = openWin({ id: 'nv', title: B.name, icon: 'web', w: B.w || 640, h: B.h || 470, build(W) {
     menubar(W, [
@@ -917,7 +960,7 @@ function openBrowser() {
       await sleep((500 + Math.random() * 600) * lat); if (my !== token) return;
       document.body.classList.remove('wait');
       visited.add(url);
-      const P = era.page(url, H);
+      const P = sitePage(url) || era.page(url, H);
       setTitle(W, B.name + ' - [' + P.title + ']');
       pg.scrollTop = 0;
       pg.innerHTML = `<div class="web ${P.cls}">${P.blocks.map(b => `<div class="blk">${b}</div>`).join('')}</div>`;
@@ -981,8 +1024,10 @@ function openBrowser() {
     W.onMin = () => stopMusic('web');
     W.onNet = () => { if (!net.connected) { stop(); stopMusic('web'); st.textContent = 'Connection lost'; } };
     syncBtns();
-    setTimeout(() => nav(era.sites.home), 50);
+    setTimeout(() => nav(startUrl || era.sites.home), 50);
   }});
+  if (startUrl && W.nav && W._built) W.nav(startUrl);
+  W._built = true;
   return W;
 }
 
@@ -1050,6 +1095,7 @@ async function downloaded(name, kb) {
 
 /* --- software store --- */
 const STORE_INFO = {
+  '1985': { name: 'Cardinal Software Catalog', sub: 'Order by mail. Programs arrive on 5¼" floppy disks in about 4 to 6 weeks. (Here, a little faster.)' },
   '1990': { name: 'Cardinal Software Catalog', sub: 'Mail-order software, shipped to your door on 3½" floppy disks.' },
   '1995': { name: 'CompuMart CD-ROM Superstore', sub: 'Hundreds of titles on CD-ROM. Multimedia! Sound! Up to 650 MB!' },
   '2000': { name: 'Download Depot Store', sub: 'Download it now, or get the CD if your modem is slow.' }
@@ -1097,7 +1143,7 @@ async function buy(id) {
   install(p);
 }
 function install(p) {
-  const media = era.id === '1990' ? 'floppy' : era.id === '1995' || !net.connected ? 'cd' : 'download';
+  const media = era.id === '1990' || era.id === '1985' ? 'floppy' : era.id === '1995' || !net.connected ? 'cd' : 'download';
   const kb = p.sizeKB || 1400;
   openWin({ id: 'inst:' + p.id, title: 'Setup - ' + p.label, icon: 'dl', w: 400, fixed: true, noMin: true, autoH: true, build(W) {
     W.body.innerHTML = `<div class="dl"><div class="inst-top">${media === 'download' ? ICONS.web : ICONS.dl}<div><b>${esc(p.label)} Setup</b><br><small data-what></small></div></div><div class="pb sunken"><div class="fill"></div></div><div data-info role="status"></div><div class="btns"><button class="btn" data-turbo hidden>Skip ahead (no fair)</button></div></div>`;
@@ -1119,8 +1165,8 @@ function install(p) {
     (async () => {
       let ok = true;
       if (media === 'floppy') {
-        const n = Math.max(1, Math.min(4, Math.ceil(kb / 1440)));
-        what.textContent = `${n} floppy disk${n > 1 ? 's' : ''}, 3½" high density`;
+        const disk = era.id === '1985' ? 360 : 1440, n = Math.max(1, Math.min(4, Math.ceil(kb / disk)));
+        what.textContent = `${n} floppy disk${n > 1 ? 's' : ''}, ${era.id === '1985' ? '5¼" 360 KB' : '3½" high density'}`;
         for (let i = 1; i <= n && ok; i++) {
           if (i > 1) { const r = await msgBox('Setup', `Please insert Disk ${i} of ${n} into drive A: and press OK.`, ['OK']); if (r === null || !alive) { ok = false; break; } }
           sfx.floppy();
@@ -1147,7 +1193,7 @@ function install(p) {
 }
 
 /* --- My Computer / File Manager --- */
-const DISK = { '1990': 80, '1995': 850, '2000': 20480 };
+const DISK = { '1985': 10, '1990': 80, '1995': 850, '2000': 20480 };
 function openFiles() {
   let path = 'C:\\';
   const title = era.shell === 'start' ? 'My Computer' : 'File Manager';
@@ -1231,7 +1277,7 @@ function openSettings() {
     era.walls.forEach(([k, c, l, sw]) => {
       const x = document.createElement('button'); x.style.background = sw || c; x.title = l; x.setAttribute('aria-label', l);
       x.setAttribute('aria-pressed', eraCfg().wall === k);
-      x.onclick = () => { eraCfg().wall = k; applyWall(); saveSettings(); $$('button', sws).forEach(y => y.setAttribute('aria-pressed', y === x)); };
+      x.onclick = () => { eraCfg().wall = k; applyWall(); saveSettings(); if (dos) dos.el.style.setProperty('--phos', c); $$('button', sws).forEach(y => y.setAttribute('aria-pressed', y === x)); };
       sws.appendChild(x);
     });
     b.querySelector('[data-tw]').onclick = e => openTW(e.currentTarget);
@@ -1684,6 +1730,154 @@ function tickClock() {
 }
 setInterval(tickClock, 15000);
 
+/* ---------- 1985: the DOS command line ---------- */
+// Programs get a DOS command name from their `cmd` field (or their id), shown as NAME.EXE in C:\PROGRAMS.
+const dosCmd = a => ((PLUGINS[a.id] && PLUGINS[a.id].cmd) || a.id).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const DOS_FIXED = {
+  'AUTOEXEC.BAT': '@ECHO OFF\nPROMPT $P$G\nPATH C:\;C:\\PROGRAMS;C:\\GAMES\nECHO Welcome! Type HELP for commands, or MENU for a menu.',
+  'CONFIG.SYS': 'FILES=20\nBUFFERS=15',
+  'COMMAND.COM': null
+};
+let dos = null;
+function dosTree() {
+  const run = apps().filter(a => a.id !== 'readme' && a.id !== 'files');
+  const games = run.filter(a => a.cat === 'game'), progs = run.filter(a => a.cat !== 'game');
+  const docs = { 'README.TXT': era.files['README.TXT'], 'MYNOTES.TXT': store.get('mynotes', '') };
+  Object.keys(era.files).forEach(f => { if (f !== 'README.TXT' && estore.get('got:' + f, false)) docs[f] = era.files[f]; });
+  const exe = list => Object.fromEntries(list.map(a => [dosCmd(a) + '.EXE', { app: a }]));
+  return {
+    '': Object.assign({ PROGRAMS: 'dir', GAMES: 'dir' }, DOS_FIXED, docs),
+    PROGRAMS: exe(progs),
+    GAMES: exe(games)
+  };
+}
+function buildDosShell() {
+  const el = document.createElement('div'); el.id = 'dos';
+  el.innerHTML = `<div class="dos-out" aria-live="polite"></div><div class="dos-line"><span class="dos-pr"></span><input class="dos-in" spellcheck="false" autocomplete="off" autocapitalize="characters" aria-label="Type a command"></div>
+    <div class="dos-bar"><button data-k="help">F1 HELP</button><button data-k="menu">F2 PROGRAMS</button><button data-k="dir">F3 FILES</button><button data-k="tm" class="dos-tm">F10 TIME MACHINE</button><button data-k="off">OFF</button></div>`;
+  layer.prepend(el);
+  dos = { el, out: el.querySelector('.dos-out'), input: el.querySelector('.dos-in'), pr: el.querySelector('.dos-pr'), cwd: '', hist: [], hi: 0 };
+  const phos = () => (era.walls.find(w => w[0] === eraCfg().wall) || era.walls[0])[1];
+  el.style.setProperty('--phos', phos());
+  dosPrompt();
+  dosPrint('Horizon DOS Version 2.11\n\nNew here? Type HELP and press Enter, or tap PROGRAMS below for a menu.\nTo visit another year, type 1990, 1995 or 2000, or tap TIME MACHINE.\n');
+  el.querySelector('.dos-bar').addEventListener('click', e => {
+    const b = e.target.closest('[data-k]'); if (!b) return; sfx.key();
+    ({ help: () => dosRun('HELP'), menu: dosMenu, dir: () => dosRun('DIR'), tm: () => openTW(el.querySelector('.dos-tm')), off: askShutdown })[b.dataset.k]();
+  });
+  dos.input.addEventListener('keydown', e => {
+    // Stop the Enter here so a program launched by it doesn't also receive it.
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const v = dos.input.value; dos.input.value = ''; dosRun(v); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (dos.hi > 0) dos.input.value = dos.hist[--dos.hi] || ''; }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); dos.hi = Math.min(dos.hist.length, dos.hi + 1); dos.input.value = dos.hist[dos.hi] || ''; }
+    else if (e.key.length === 1 || e.key === 'Backspace') sfx.key();
+  });
+  el.addEventListener('pointerup', e => { if (!e.target.closest('button') && !getSelection().toString()) dosFocus(); });
+  dosFocus();
+}
+function dosFocus() { if (dos && !activeWin()) setTimeout(() => dos && dos.input.focus({ preventScroll: true }), 0); }
+function dosPrompt() { dos.pr.textContent = 'C:\\' + dos.cwd + '>'; }
+function dosPrint(text) {
+  dos.out.appendChild(document.createTextNode(text.endsWith('\n') ? text : text + '\n'));
+  while (dos.out.childNodes.length > 400) dos.out.firstChild.remove();
+  dos.el.scrollTop = dos.el.scrollHeight;
+}
+function dosPath(arg) {
+  let p = arg.toUpperCase().replace(/\//g, '\\').replace(/^C:/, '');
+  if (p.startsWith('\\')) p = p.slice(1); else if (dos.cwd && p) p = dos.cwd + '\\' + p;
+  const parts = []; p.split('\\').forEach(s => { if (!s || s === '.') return; if (s === '..') parts.pop(); else parts.push(s); });
+  return parts.join('\\');
+}
+function dosRun(line) {
+  const raw = String(line).trim();
+  dosPrint(dos.pr.textContent + raw);
+  if (raw) { dos.hist.push(raw); dos.hi = dos.hist.length; }
+  if (!raw) return;
+  const m = raw.match(/^(\S+?)(?:\s+(.*))?$/) || [], cmd = (m[1] || '').toUpperCase().replace(/\.(EXE|COM|BAT)$/, ''), arg = (m[2] || '').trim();
+  const T = dosTree(), here = T[dos.cwd] || {};
+  const findApp = name => { for (const dir of ['', 'PROGRAMS', 'GAMES']) { const f = (T[dir] || {})[name + '.EXE']; if (f) return f.app; } return null; };
+  const cmds = {
+    HELP: () => dosPrint(`Commands you can type:
+  DIR          list files            CD name     go into a folder (CD \\ = top)
+  TYPE file    show a text file      CLS         clear the screen
+  MENU         program menu          CATALOG     the mail-order software catalog
+  EDIT         write notes           CONTROL     settings (sound, screen color)
+  COLOR        change screen color   VER, DATE, TIME, MEM   system info
+  1990  1995  2000   travel to another year          OFF    turn off
+Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES)[0] ? Object.keys(T.GAMES)[0].replace('.EXE', '') : 'CALC'}.`),
+    '?': () => cmds.HELP(),
+    CLS: () => { dos.out.textContent = ''; },
+    VER: () => dosPrint('\nHorizon DOS Version 2.11\n'),
+    DATE: () => { const d = new Date(); dosPrint(`Current date is ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(1985, d.getMonth(), d.getDate()).getDay()]} ${d.getMonth() + 1}-${d.getDate()}-1985`); },
+    TIME: () => dosPrint('Current time is ' + new Date().toLocaleTimeString([], { hour12: false })),
+    MEM: () => dosPrint('\n   655360 bytes total memory\n   591200 bytes free\n'),
+    ECHO: () => dosPrint(arg || 'ECHO is on'),
+    DIR: () => {
+      const p = arg ? dosPath(arg) : dos.cwd, d = T[p];
+      if (!d) { dosPrint('File not found'); return; }
+      const rows = Object.entries(d).map(([n, v]) => {
+        const [base, ext = ''] = n.split('.'), isDir = v === 'dir';
+        const size = isDir ? '<DIR>   ' : String(v && v.app ? ((PLUGINS[v.app.id] && PLUGINS[v.app.id].sizeKB) || 48) * 1024 : typeof v === 'string' ? v.length : 25307).padStart(8);
+        return `${base.padEnd(8)} ${ext.padEnd(3)} ${size}   1-01-85  12:00p`;
+      });
+      dosPrint(`\n Volume in drive C is HORIZON\n Directory of  C:\\${p}\n\n${rows.join('\n')}\n        ${rows.length} File(s)   ${(9 - rows.length * 0.05).toFixed(2)}M bytes free\n`);
+    },
+    CD: () => {
+      if (!arg) { dosPrint('C:\\' + dos.cwd); return; }
+      const p = dosPath(arg);
+      if (p === '' || T[p]) { dos.cwd = p; dosPrompt(); } else dosPrint('Invalid directory');
+    },
+    CHDIR: () => cmds.CD(),
+    TYPE: () => {
+      const f = here[arg.toUpperCase()] ?? T[''][arg.toUpperCase()];
+      if (typeof f === 'string') dosPrint(f || '(empty file)');
+      else if (f === null || (f && f.app)) dosPrint('\u263a\u2665\u266a\u25ba\u2022 \u00b6\u00a7 That is a program, not text. It looks like gibberish. Type its name to run it.');
+      else dosPrint('File not found - ' + arg.toUpperCase());
+    },
+    EDIT: () => openNotepad('MYNOTES.TXT'),
+    MENU: () => dosMenu(),
+    CATALOG: () => openStore(),
+    CONTROL: () => openSettings(),
+    COLOR: () => { const i = era.walls.findIndex(w => w[0] === eraCfg().wall); eraCfg().wall = era.walls[(i + 1) % era.walls.length][0]; saveSettings(); dos.el.style.setProperty('--phos', era.walls[(i + 1) % era.walls.length][1]); },
+    OFF: () => askShutdown(), SHUTDOWN: () => askShutdown(), EXIT: () => askShutdown(),
+    TIMEMACHINE: () => openTW(dos.el.querySelector('.dos-tm')), TM: () => cmds.TIMEMACHINE(),
+    WIN: () => dosPrint('Windows? Pictures? A mouse? Those are coming in a few years.\nType 1990 to jump ahead and see.'),
+    FORMAT: () => dosPrint('Nice try. This museum computer is protected. (In 1985, FORMAT C: really would erase everything.)'),
+    DEL: () => dosPrint('Access denied. This museum computer is protected.'), ERASE: () => cmds.DEL(),
+    DIAL: () => { const a = findApp('TERMINAL') || findApp('BBS'); a ? a.open() : dosPrint('No terminal program is installed. Check the CATALOG.'); }
+  };
+  if (/^(19(85|90|95)|2000)$/.test(cmd)) { if (cmd === era.id) dosPrint('You are already in ' + cmd + '.'); else switchEra(cmd); return; }
+  if (cmds[cmd]) { cmds[cmd](); return; }
+  const a = findApp(cmd);
+  if (a) { dosPrint(''); a.open(); return; }
+  const low = cmd.toLowerCase();
+  const future = Object.values(PLUGINS).find(p => dosCmd({ id: p.id }) === cmd || p.id === low);
+  if (future && future.kind === 'store' && !isOwned(future.id) && future.year <= era.year) { dosPrint(`${future.label} isn't installed. Type CATALOG to order it.`); return; }
+  dosPrint('Bad command or file name');
+}
+function dosMenu() {
+  const items = [
+    ...apps().filter(a => !['files', 'readme', 'cp', 'store'].includes(a.id)).map(a => ({ label: a.label, hint: dosCmd(a), fn: a.open })),
+    { label: 'Read Me', hint: 'TYPE README.TXT', fn: () => openNotepad('README.TXT') },
+    { label: 'Software Catalog', hint: 'CATALOG', fn: () => openStore() },
+    { label: 'Control Panel', hint: 'CONTROL', fn: openSettings },
+    { label: 'Time Machine: visit another year', hint: '1990', fn: () => openTW(dos.el.querySelector('.dos-tm')) },
+    { label: 'Turn off the computer', hint: 'OFF', fn: askShutdown }
+  ];
+  openWin({ id: 'dosmenu', title: 'PROGRAM MENU', icon: null, w: 460, fixed: true, autoH: true, build(W) {
+    W.body.innerHTML = `<div class="dos-menu"><p>Use the arrow keys and Enter, or tap a line.</p><ol>${items.map((it, i) => `<li><button data-i="${i}"><b>${esc(it.label)}</b><small>${esc(it.hint)}</small></button></li>`).join('')}</ol></div>`;
+    let sel = 0; const btns = $$('button', W.body);
+    const hi = () => btns.forEach((b, i) => b.classList.toggle('on', i === sel));
+    btns.forEach((b, i) => b.onclick = () => { closeWin(W); items[i].fn(); });
+    W.onKey = e => {
+      if (e.key === 'ArrowDown') { sel = (sel + 1) % items.length; hi(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { sel = (sel - 1 + items.length) % items.length; hi(); e.preventDefault(); }
+      else if (e.key === 'Enter') { e.preventDefault(); closeWin(W); items[sel].fn(); }
+    };
+    hi(); setTimeout(() => btns[0] && btns[0].focus(), 30);
+  }});
+}
+
 /* ---------- time machine ---------- */
 function setEra(id) {
   era = ERAS[id] || ERAS[ERA_IDS[0]];
@@ -1691,7 +1885,7 @@ function setEra(id) {
   ERA_IDS.forEach(k => screen.classList.toggle('era-' + k, k === era.id));
   document.title = 'Log On to ' + era.year;
   $('#st-splash').innerHTML = era.splash;
-  applyWall(); setupTaskbar(); tickClock();
+  applyWall(); setupTaskbar(); tickClock(); renderRoom();
   try { history.replaceState(null, '', '#' + era.id); } catch (e) {}
 }
 function renderPower() {
@@ -1705,6 +1899,7 @@ function renderPower() {
     b.onclick = () => { setEra(id); renderPower(); sfx.click(); };
     box.appendChild(b);
   });
+  layoutRoom();
 }
 function openTW(anchor) {
   const p = $('#tw-panel');
@@ -1719,7 +1914,7 @@ function openTW(anchor) {
     p.appendChild(b);
   });
   p.classList.add('on');
-  const S = screen.getBoundingClientRect();
+  const S = { left: 0, top: 0, width: innerWidth, height: innerHeight };
   const r = (anchor || (stageOn('st-desk') ? $('#tw-task') : $('#tw-float'))).getBoundingClientRect();
   const pr = p.getBoundingClientRect();
   p.style.left = Math.max(4, Math.min(r.right - S.left - pr.width, S.width - pr.width - 4)) + 'px';
@@ -1735,7 +1930,7 @@ function teardown() {
   if (net.connected) hangUp();
   net.dropped = false;
   stopMusic(); wake(); closeMenu(); closeStart(); closeTW(); closeAll();
-  $$('#deskicons').forEach(x => x.remove());
+  $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   document.body.classList.remove('wait');
   visited.clear();
 }
@@ -1744,12 +1939,110 @@ async function switchEra(id) {
   if (id === era.id && booted && stageOn('st-desk')) return;
   bootTok++; skipping = true; booted = false;
   teardown();
-  if (stageOn('st-power')) { setEra(id); renderPower(); return; }
+  if (stageOn('st-power') || stageOn('st-bye')) { setEra(id); renderPower(); if (stageOn('st-bye')) show('st-power'); return; }
   powerAnim('poweroff'); noise(0.08, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 });
   await sleep(480);
   screen.classList.remove('poweroff');
-  setEra(id);
+  if (!roomOn) { show('st-power'); setLeds(false); await zoomOut(); }
+  setEra(id); renderPower();
+  await sleep(roomOn ? 500 : 0);
   boot();
+}
+
+/* ---------- the desk: you see the computer first, it boots on its little monitor, then we zoom into the screen ---------- */
+const room = $('#room'), VW = 640, VH = 480; // the screen is laid out at 640x480 (VGA) while it sits in the monitor
+let roomOn = false;
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rigHTML(id) {
+  const drive525 = (x, y) => `<i class="dr d525" style="left:${x}u;top:${y}u"></i>`;
+  const u = s => s.replace(/(-?[\d.]+)u/g, 'calc(var(--u)*$1)');
+  const common = `<i class="kb"></i>`;
+  const R = {
+    '1985': `<i class="case" style="left:14u;top:50u;width:72u;height:12u">${drive525(40, 2)}${drive525(56, 2)}<i class="badge" style="left:4u;top:4u">HORIZON PC</i><button class="pbtn" style="left:4u;top:7.2u" aria-label="Power switch"><i class="led"></i></button><i class="led hdd" style="left:10u;top:8.4u"></i></i>
+      <i class="mon" style="left:26u;top:9u;width:48u;height:41u"><i class="glass" style="left:4u;top:3u;width:40u;height:30u"></i><i class="brand">MONOCHROME DISPLAY</i><i class="knob" style="left:40u;top:35u"></i><i class="knob" style="left:36u;top:35u"></i></i>${common}`,
+    '1990': `<i class="case" style="left:14u;top:50u;width:72u;height:12u"><i class="dr d525" style="left:44u;top:2u"></i><i class="dr d35" style="left:60u;top:3.2u"></i><i class="badge" style="left:4u;top:3u">HORIZON 386</i><i class="turbo" style="left:22u;top:7u">TURBO</i><button class="pbtn" style="left:4u;top:7u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:10u;top:8.2u"></i></i>
+      <i class="mon" style="left:26u;top:9u;width:48u;height:41u"><i class="glass" style="left:4u;top:3u;width:40u;height:30u"></i><i class="brand">VGA COLOR</i><i class="knob" style="left:40u;top:35u"></i></i>${common}<i class="mouse" style="left:88u;top:67u"></i>`,
+    '1995': `<i class="tower" style="left:81u;top:20u;width:15u;height:42u"><i class="dr cd" style="left:1.5u;top:4u"></i><i class="dr d35 v" style="left:4u;top:11u"></i><i class="badge" style="left:2u;top:17u">PENTIUM</i><button class="pbtn" style="left:5.5u;top:28u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:10u;top:36u"></i></i>
+      <i class="spk" style="left:8u;top:40u"></i><i class="mon big" style="left:22u;top:6u;width:52u;height:48u"><i class="glass" style="left:4u;top:4u;width:44u;height:33u"></i><i class="brand">Multimedia 15"</i><i class="knob" style="left:44u;top:41u"></i></i><i class="stand" style="left:38u;top:54u"></i>${common}<i class="mouse" style="left:82u;top:67u"></i>`,
+    '2000': `<i class="tower slim" style="left:82u;top:12u;width:16u;height:50u"><i class="dr cd" style="left:1.5u;top:4u"></i><i class="dr cd" style="left:1.5u;top:9u"></i><i class="dr d35 v" style="left:4u;top:15u"></i><i class="badge" style="left:2u;top:22u">PENTIUM III</i><button class="pbtn" style="left:6u;top:33u" aria-label="Power button"><i class="led"></i></button><i class="led hdd" style="left:11u;top:42u"></i></i>
+      <i class="spk tall" style="left:6u;top:34u"></i><i class="mon big" style="left:18u;top:3u;width:56u;height:51u"><i class="glass" style="left:4u;top:4u;width:48u;height:36u"></i><i class="brand">17" FLAT SCREEN</i><i class="cam"></i></i><i class="stand" style="left:36u;top:54u"></i>${common}<i class="mouse opt" style="left:80u;top:67u"></i>`
+  };
+  return u(R[id] || R['1990']);
+}
+function renderRoom() {
+  room.dataset.era = era.id;
+  room.querySelector('.rm-rig').innerHTML = rigHTML(era.id);
+  room.querySelector('.pbtn').onclick = roomPower;
+  layoutRoom();
+}
+function layoutRoom() {
+  if (!roomOn) return;
+  const W = innerWidth, H = innerHeight, land = W >= H * 1.1, ui = room.querySelector('.rm-ui'), rig = room.querySelector('.rm-rig');
+  room.classList.toggle('land', land);
+  let ax = 0, ay = 0, aw = W, ah = H;
+  if (land) { const uiw = Math.min(W * 0.42, 480); ax = uiw; aw = W - uiw; }
+  else { const uih = ui.offsetHeight; ay = uih; ah = H - uih; }
+  const u = Math.max(2, Math.min(aw / 102, ah / 80));
+  rig.style.setProperty('--u', u + 'px');
+  const left = ax + (aw - 100 * u) / 2, top = ay + Math.max(0, (ah - 78 * u) / 2);
+  rig.style.left = left + 'px'; rig.style.top = top + 'px';
+  room.querySelector('.rm-desk').style.top = (top + 62 * u) + 'px';
+  fitScreen();
+}
+function glass() { const g = room.querySelector('.glass'); return g ? g.getBoundingClientRect() : { left: 0, top: 0, width: VW, height: VH }; }
+const fitTransform = g => `translate(${g.left}px,${g.top}px) scale(${g.width / VW})`;
+function fitScreen() { if (roomOn) { const g = glass(); screen.style.transform = fitTransform(g); const gl = $('#glare'); Object.assign(gl.style, { left: g.left + 'px', top: g.top + 'px', width: g.width + 'px', height: g.height + 'px' }); } }
+function zoomed(g) {
+  const W = innerWidth, H = innerHeight, z = Math.max(W / g.width, H / g.height) * 1.04;
+  const tx = W / 2 - (g.left + g.width / 2) * z, ty = H / 2 - (g.top + g.height / 2) * z;
+  return { room: `translate(${tx}px,${ty}px) scale(${z})`, screen: `translate(${tx + g.left * z}px,${ty + g.top * z}px) scale(${g.width / VW * z})` };
+}
+function enterRoom() { roomOn = true; document.body.classList.add('in-room'); layoutRoom(); }
+function exitRoom() {
+  roomOn = false; document.body.classList.remove('in-room');
+  room.style.transition = room.style.transform = screen.style.transition = screen.style.transform = '';
+  screen.classList.remove('fadein'); void screen.offsetWidth; screen.classList.add('fadein');
+}
+const ZOOM = 'transform .95s cubic-bezier(.55,0,.25,1)';
+async function zoomIn() {
+  if (!roomOn) return;
+  if (!reduceMotion()) {
+    const z = zoomed(glass());
+    room.style.transformOrigin = '0 0';
+    room.style.transition = screen.style.transition = ZOOM;
+    room.style.transform = z.room; screen.style.transform = z.screen;
+    $('#glare').style.opacity = 0;
+    await sleep(950);
+  }
+  exitRoom();
+}
+async function zoomOut() {
+  if (roomOn) return;
+  enterRoom();
+  if (reduceMotion()) return;
+  const g = glass(), z = zoomed(g);
+  room.style.transformOrigin = '0 0';
+  room.style.transition = screen.style.transition = 'none';
+  room.style.transform = z.room; screen.style.transform = z.screen; $('#glare').style.opacity = 0;
+  void room.offsetWidth;
+  room.style.transition = screen.style.transition = ZOOM;
+  room.style.transform = ''; screen.style.transform = fitTransform(g);
+  await sleep(950);
+  room.style.transition = screen.style.transition = ''; $('#glare').style.opacity = '';
+}
+function setLeds(on, busy) { room.classList.toggle('on', !!on); room.classList.toggle('busy', !!busy); }
+function roomPower() {
+  if (stageOn('st-bios') || stageOn('st-splash')) { // pressing power while it boots turns it off, like a real one
+    bootTok++; skipping = true; $('#skip').classList.remove('on');
+    noise(0.06, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 }); setLeds(false); renderPower(); show('st-power'); return;
+  }
+  $('#pwr').click();
+}
+function initRoom() {
+  document.body.append($('#skip'), $('#tw-float'), $('#tw-panel'));
+  room.querySelector('.rm-ui').appendChild($('.power-box'));
+  window.addEventListener('resize', () => { if (roomOn) layoutRoom(); });
+  enterRoom();
 }
 
 /* ---------- boot / shutdown ---------- */
@@ -1760,7 +2053,7 @@ async function boot() {
   audio();
   bios.innerHTML = '';
   $('#skip').classList.add('on');
-  show('st-bios'); powerAnim('poweron');
+  show('st-bios'); powerAnim('poweron'); setLeds(true, true);
   const live = () => my === bootTok && !skipping;
   const B = {
     live, sfx, tone, bios,
@@ -1784,22 +2077,33 @@ async function boot() {
   const ok = await era.boot(B);
   if (ok && live()) toDesktop();
 }
-function toDesktop() {
+function toDesktop(instant) {
   if (booted) return;
   booted = true; skipping = true;
-  $('#skip').classList.remove('on');
+  $('#skip').classList.remove('on'); setLeds(true, false);
+  if (roomOn && !instant) { const my = bootTok; zoomIn().then(() => { if (my === bootTok && booted) finishDesk(); }); return; }
+  if (roomOn) exitRoom();
+  finishDesk();
+}
+function finishDesk() {
   show('st-desk'); idleT = Date.now();
-  $$('#deskicons').forEach(x => x.remove());
+  $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   setupTaskbar();
-  if (era.shell === 'start') buildStartShell(); else openProgman();
+  if (era.shell === 'start') buildStartShell(); else if (era.shell === 'dos') buildDosShell(); else openProgman();
   allowance();
+  // A shared home-page link (#1995&page=…) opens straight to that page, already online.
+  if (HASH.page && !HASH.opened && era.apps.includes('nv')) {
+    HASH.opened = true;
+    setTimeout(() => { if (!booted) return; net.connected = true; net.since = Date.now(); refreshTray(); toast('Connected. Opening the home page someone shared with you…'); openBrowser(SHARE_URL); }, 700);
+  }
   const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
   if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
-  if (!estore.get('seenReadme', false)) { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
+  if (!estore.get('seenReadme', false) && era.shell !== 'dos') { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
 }
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };
 $('#pwr').onclick = () => {
+  if (booted || stageOn('st-bios') || stageOn('st-splash')) return;
   audio();
   noise(0.08, { ft: 'lowpass', f: 300, vol: 0.6, decay: 1 });
   tone(55, 1.2, { type: 'sine', vol: 0.12, decay: 1 });
@@ -1820,7 +2124,10 @@ async function shutdown() {
   await sleep(2600); if (my !== bootTok) return;
   bye.classList.remove('shutting');
   t.textContent = "It's now safe to turn off your computer.";
-  again.hidden = false; again.focus();
+  again.hidden = false;
+  await zoomOut(); if (my !== bootTok) return;
+  renderPower(); setLeds(false);
+  $('#pwr').focus();
 }
 $('#relight').onclick = async () => {
   powerAnim('poweroff'); noise(0.08, { ft: 'lowpass', f: 300, vol: 0.5, decay: 1 });
@@ -1834,12 +2141,12 @@ window.addEventListener('resize', () => { Object.values(wins).forEach(W => { if 
 if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
   launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
   own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,
-  desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(); } },
+  desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(true); } },
   era: () => era.id, switchEra, connect: () => { net.connected = true; refreshTray(); Object.values(wins).forEach(W => W.onNet && W.onNet()); }
 };
 
 /* ---------- start ---------- */
-const fromHash = location.hash.replace('#', '');
-setEra(ERAS[fromHash] ? fromHash : store.get('era', ERA_IDS[0]));
+initRoom();
+setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERAS['1990'] ? '1990' : ERA_IDS[0]));
 renderPower();
 })();

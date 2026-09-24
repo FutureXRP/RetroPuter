@@ -43,6 +43,7 @@ function page(url, h) {
           <div class="box"><h3>BUDDY MESSENGER</h3><div>3 of your buddies are online. ${APP('im', 'Send an instant message')}</div></div>
           <div class="box"><h3>WEATHER</h3><div>Prairie City: 34°F, cloudy<br>Tomorrow: flurries</div></div>
           <div class="box"><h3>SPOTLIGHT</h3><div>${A(SITES.kevin, 'PixelPets.com')}: adopt a virtual pet! Local kid makes it big.<br>${A(SITES.bid, 'BidBarn')}: buy anything from anyone.</div></div>
+          <div class="box"><h3>FUN STUFF</h3><div>${A('http://www.quizmania2000.com/', 'Quiz: Which dot-com are you?')}<br>${A('http://www.ecardcorner.com/', 'Send a free e-card')}<br>${A('http://www.prairienet.com/horoscopes/', 'Horoscopes')}<br>${A('http://www.pixelpulse.com/', 'Game reviews')}<br>${A('http://www.weblogworld.com/', 'Weblog directory')}<br>${A('http://www.cyberburbs.com/', 'Free home pages')}</div></div>
           <div class="box"><h3>YOUR CONNECTION</h3><div>${fast ? 'DSL: pages load before you can blink.' : 'Dial-up at ' + h.fmtBps(h.effBps()) + '. Tired of waiting? Ask about DSL!'}</div></div>
         </div>`,
         `<p class="pd" style="text-align:center;color:#666;font-size:11px">Visitor #${(hits + 1).toLocaleString()} · © 2000 PrairieNet · Make PrairieNet your home page!</p>`
@@ -55,7 +56,8 @@ function page(url, h) {
         const f = root.querySelector('[data-search]'), out = root.querySelector('[data-results]');
         const run = q => {
           const slug = q.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'nothing';
-          out.innerHTML = `<p style="border-top:1px solid #36c;padding-top:4px;font-size:11px">Results 1 - 5 of about <b>${(1200 + slug.length * 88131).toLocaleString()}</b> for <b>${esc(q)}</b>. (0.18 seconds)</p><ol>
+          const found = h.search(q).slice(0, 8);
+          out.innerHTML = `<p style="border-top:1px solid #36c;padding-top:4px;font-size:11px">Results 1 - ${found.length + 5} of about <b>${(1200 + slug.length * 88131).toLocaleString()}</b> for <b>${esc(q)}</b>. (0.18 seconds)</p><ol>${found.map(e => `<li>${A(e.url, esc(e.title))}<br><small>${esc(e.desc || '')}</small><br><small style="color:#080">${esc(e.url.replace(/^http:\/\//, ''))}</small></li>`).join('')}
             <li>${A('http://www.' + slug + '.com/', esc(q) + '.com: Everything about ' + esc(q))}<br><small style="color:#080">www.${esc(slug)}.com/</small></li>
             <li>${A(SITES.bid, esc(q) + ' on BidBarn: 312 auctions ending soon')}</li>
             <li>${A(SITES.news, 'The Daily Byte: The ' + esc(q) + ' bubble?')}</li>
@@ -80,8 +82,8 @@ function page(url, h) {
     case SITES.blog:
       return { title: "Kevin's Weblog", cls: 'w00', blocks: [
         `<div class="pd"><h1>Kevin's Weblog</h1><p style="color:#666">A "weblog" is like a diary, but online, and anyone can read it. People are starting to call them "blogs".</p></div>`,
-        `<div class="pd"><h2>Jan 1, 2000, 12:04 AM</h2><p>Y2K happened. Nothing broke. My dad filled the basement with bottled water, so we're set until about 2004.</p><h2>Dec 20, 1999</h2><p>Grandma is on email now! She writes in ALL CAPS and signs every message "Love, Grandma (this is Grandma)."</p><h2>Nov 3, 1999</h2><p>Found my old 1995 home page. The black background. The MIDI. I can't believe I made that. I can't believe it's still up.</p><h2>Oct 12, 1999</h2><p>Got DSL at the office! Pages load instantly. I'll never go back to dial-up. (I still have dial-up at home.)</p></div>`,
-        `<p class="pd">${A(SITES.kevin, '← Back to PixelPets.com')}</p>`
+        `<div class="pd"><h2>Jan 1, 2000, 12:04 AM</h2><p>Y2K happened. Nothing broke. My dad filled the basement with bottled water, so we're set until about 2004.</p><h2>Dec 20, 1999</h2><p>Grandma is on email now! She writes in ALL CAPS and signs every message "Love, Grandma (this is Grandma)." I also helped her make ${A('http://www.cyberburbs.com/heartland/4455/', 'her very own home page')}.</p><h2>Nov 3, 1999</h2><p>Found my old 1995 home page. The black background. The MIDI. I can't believe I made that. I can't believe it's still up.</p><h2>Oct 12, 1999</h2><p>Got DSL at the office! Pages load instantly. I'll never go back to dial-up. (I still have dial-up at home.)</p></div>`,
+        `<p class="pd">${A(SITES.kevin, '← Back to PixelPets.com')} · ${A('http://intranet.pixelpets.com/', 'Employee intranet')} · ${A('http://www.weblogworld.com/', 'More weblogs')}</p>`
       ]};
     case SITES.guest:
       return { title: 'PixelPets Guestbook', cls: 'pix', blocks: [
@@ -106,7 +108,7 @@ function page(url, h) {
         `<div class="top" style="background:linear-gradient(#2a9d2a,#146414)">BidBarn <small>The world's online yard sale</small></div>`,
         `<div class="pd"><table border="1" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th>Item</th><th>Current bid</th><th>Ends</th><th></th></tr>
           ${[['Used 28.8K modem, works great, makes noise', '$1.00', '2 hrs'], ['Y2K survival kit, unopened (did not need it)', '$4.50', '5 hrs'], ['Box of 400 free Internet trial CDs', '$0.01', '1 day'], ['Virtual pet (PixelPets.com gift card)', '$0.75', '3 days'], ['Floppy disks, 50 pack. Remember these?', '$2.25', '6 hrs']].map(([i, p, e]) => `<tr><td>${i}</td><td>${p}</td><td>${e}</td><td><button class="btn" data-bid>Bid</button></td></tr>`).join('')}</table></div>`,
-        `<p class="pd">${A(SITES.home, 'Back to PrairieNet')}</p>`
+        `<p class="pd"><b>Featured auction:</b> ${A('http://www.bidbarn.com/item/40211.html', 'Grilled cheese sandwich shaped like a modem')} (ends in 1 minute!)</p><p class="pd">${A(SITES.home, 'Back to PrairieNet')}</p>`
       ], after(root) {
         root.querySelectorAll('[data-bid]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = 'Outbid!'; h.msgBox('BidBarn', 'You were winning for 11 seconds. Then someone named "sniper4000" outbid you with one second left.\n\nOnline auctions were exactly like this.', ['OK'], 'warn'); });
       }};

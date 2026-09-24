@@ -16,8 +16,8 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 | `id` | Unique, lowercase letters/numbers. Also the storage namespace. |
 | `label` | Name on the desktop, in menus and on the title bar. |
 | `kind` | `'builtin'` (free, ships with the OS) or `'store'` (bought in the Software Store). |
-| `eras` | Builtin only: which years include it, e.g. `['1995', '2000']`. |
-| `year` | Store only: release year. It's sold and runs in that year and every later year. |
+| `eras` | Builtin only: which years include it, e.g. `['1985', '1995', '2000']`. In `'1985'` there is no windowed desktop: windows fill the screen and should look like an 80-column text-mode program (check `api.era.id === '1985'`). |
+| `year` | Store only: release year (1985, 1990, 1995 or 2000). It's sold and runs in that year and every later year. |
 | `price`, `publisher`, `genre`, `tagline`, `blurb`, `sizeKB`, `box: { bg, fg, accent }` | Store only: the store listing and box art. `sizeKB` sets install time (floppies, CD or download). |
 | `cat` | `'game'` (default) or `'acc'` (accessory). |
 | `icon` | Full `<svg viewBox="0 0 32 32">…</svg>` markup, pixel-art style (`shape-rendering="crispEdges"`). |
@@ -45,6 +45,9 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 - `api.setTitle(text)`, `api.close()`.
 - `api.earn(dollars, 'reason')`: give the player play money for a win (the engine caps it daily). Use small amounts ($2 to $10).
 - `api.online()`, `api.kbps()`: whether the modem is connected, and its speed.
+- `api.openUrl(url)`: open the year's web browser at a fake-web address.
+- `api.say(text, { rate, pitch, interrupt })`: read text aloud with the browser's speech voice (for pre-readers). Returns false if unavailable or muted, so always show the text on screen too.
+- `api.dial(number, onStatus, profile)`: play a real modem call (`profile` is `'v22'` for 300-2,400 bps). Returns `{ done: Promise<boolean>, cancel() }`. For programs that manage their own connection, like a 1985 terminal.
 - `api.user`: the player's user name.
 - Helpers: `api.esc`, `api.sleep`, `api.pick`, `api.$`, `api.$$`.
 
