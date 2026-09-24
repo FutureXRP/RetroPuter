@@ -633,12 +633,20 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .rm-ad{position:absolute;z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px}
 .rm-ad[hidden]{display:none}
 .rm-ad small{font:9px/1 Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 2px #000}
-.rm-ad-box{box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 14px;overflow:hidden;background:linear-gradient(90deg,#10204a,#1e3f8a 60%,#2a58b8);border:1px solid #0a1230;box-shadow:0 4px 14px rgba(0,0,0,.45);color:#fff;font-family:Arial,Helvetica,sans-serif}
-.rm-ad-box .ad-ico svg{width:46px;height:46px;display:block}
-.rm-ad-box .ad-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.rm-ad-box .ad-txt b{font:700 22px Georgia,"Times New Roman",serif;color:#ffd84d;white-space:nowrap}
-.rm-ad-box .ad-txt span{font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rm-ad-box .ad-dim{font:11px monospace;border:1px dashed rgba(255,255,255,.6);padding:3px 6px;opacity:.85}
-.rm-ad-box.s468{gap:8px;padding:0 10px}.rm-ad-box.s468 .ad-ico svg{width:34px;height:34px}.rm-ad-box.s468 .ad-txt b{font-size:17px}.rm-ad-box.s468 .ad-txt span{font-size:11px}
-.rm-ad-box.s320{gap:6px;padding:0 8px}.rm-ad-box.s320 .ad-ico svg{width:28px;height:28px}.rm-ad-box.s320 .ad-txt{gap:1px}.rm-ad-box.s320 .ad-txt b{font-size:14px}.rm-ad-box.s320 .ad-txt span{font-size:10px}.rm-ad-box.s320 .ad-dim{font-size:9px;padding:2px 4px}
+.rm-ad-box{box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:0 10px;overflow:hidden;text-decoration:none;cursor:pointer;color:#000;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.rm-ad-box:focus-visible{outline:2px dashed #ffb000;outline-offset:3px}
+/* the house ad: a mid-90s web banner */
+.rm-ad-box.ad-house{background:#000080 repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px);border:3px solid;border-color:#dfdfdf #404040 #404040 #dfdfdf;color:#fff;font-family:var(--dos)}
+.ad-house .hs-pc{width:52px;height:44px;flex:none;position:relative;background:#c0c0c0;border:2px solid;border-color:#fff #555 #555 #fff}
+.ad-house .hs-pc i{position:absolute;left:5px;top:4px;right:5px;bottom:10px;background:#008080;animation:hsglow 1.2s steps(2) infinite}
+@keyframes hsglow{50%{background:#00a8a8}}
+.ad-house .hs-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.05}
+.ad-house .hs-txt b{font-weight:400;font-size:34px;color:#ffff00;letter-spacing:1px;text-shadow:2px 2px 0 #800000}
+.ad-house .hs-txt span{font-size:17px;color:#c0ffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-house .hs-blink{animation:blink 1s steps(1) infinite}
+.ad-house .hs-btn{flex:none;background:#c0c0c0;color:#000;border:3px solid;border-color:#fff #404040 #404040 #fff;padding:6px 10px;font-size:20px}
+.rm-ad-box.ad-house:hover .hs-btn{background:#ffff00}
+.rm-ad-box.s468{gap:8px;padding:0 8px}.s468.ad-house .hs-pc{width:38px;height:32px}.s468.ad-house .hs-txt b{font-size:24px}.s468.ad-house .hs-txt span{font-size:13px}.s468.ad-house .hs-btn{font-size:15px;padding:3px 6px}
+.rm-ad-box.s320{gap:6px;padding:0 6px}.s320.ad-house .hs-txt b{font-size:20px}.s320.ad-house .hs-txt span{font-size:12px}.s320.ad-house .hs-btn{font-size:14px;padding:2px 6px}
+@media (prefers-reduced-motion: reduce){.ad-house .hs-blink,.ad-house .hs-pc i{animation:none}}
 @media (max-height:720px){.rm-ui .power-box small{display:none}}
