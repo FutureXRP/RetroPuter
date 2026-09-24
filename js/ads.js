@@ -23,7 +23,7 @@ window.RETRO_SPONSOR = window.RETRO_SPONSOR || {
   href: 'advertise.html',
   label: 'Sponsor RetroPuter',
   newTab: false,
-  seconds: 4,
+  seconds: 10,
   html: era => `<span class="hsp-top">This ${era.year} computer is brought to you by</span>
     <span class="hsp-logo">YOUR BRAND</span>
     <span class="hsp-sub">Sponsor the startup screen of RetroPuter!</span>
