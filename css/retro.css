@@ -669,3 +669,34 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .sp-house .hsp-sub{font-size:22px}
 .sp-house .hsp-btn{margin-top:6px;background:#c0c0c0;color:#000;border:3px solid;border-color:#fff #404040 #404040 #fff;padding:6px 14px;font-size:20px;animation:blink 1.2s steps(1) infinite}
 @media (prefers-reduced-motion: reduce){.sp-house .hsp-btn{animation:none}}
+/* ---- Pop Zero, a made-up soda used as the sample advertiser (js/ads.js) ---- */
+.pz-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.pz-stars i{position:absolute;width:3px;height:3px;background:#fff;box-shadow:0 0 4px #00e5ff;animation:pztw 1.6s steps(2) infinite}
+.pz-stars i:nth-child(4n+1){left:8%;top:18%}.pz-stars i:nth-child(4n+2){left:37%;top:72%;animation-delay:.4s}.pz-stars i:nth-child(4n+3){left:61%;top:24%;animation-delay:.8s}.pz-stars i:nth-child(4n){left:88%;top:66%;animation-delay:1.2s}
+.pz-stars i:nth-child(n+5){transform:translate(42px,8px);background:#ffe600}.pz-stars i:nth-child(n+9){transform:translate(-30px,-6px);background:#ff2bd6}
+@keyframes pztw{50%{opacity:.15}}
+.rm-ad-box.ad-popzero{position:relative;background:#14003a linear-gradient(90deg,#2a0070,#14003a 55%,#003a52);border:3px solid;border-color:#b58cff #3a0f94 #3a0f94 #b58cff;color:#fff;font-family:var(--dos)}
+.ad-popzero .pz-can{flex:none;position:relative;image-rendering:pixelated;animation:pzbob 1.4s steps(2) infinite}
+@keyframes pzbob{50%{transform:translateY(-3px)}}
+.ad-popzero .pz-name{flex:none;display:flex;flex-direction:column;line-height:.9;position:relative}
+.ad-popzero .pz-logo{font-weight:400;font-size:44px;letter-spacing:2px;color:#ffe600;text-shadow:3px 3px 0 #ff2bd6,5px 5px 0 #3a0f94;white-space:nowrap}
+.ad-popzero .pz-tag{font-weight:400;font-size:18px;color:#00e5ff;white-space:nowrap}
+.ad-popzero .pz-line{flex:1;min-width:0;overflow:hidden;text-align:center;font-size:24px;position:relative;white-space:nowrap}
+.ad-popzero .pz-line b{font-weight:400;color:#ff2bd6}
+.ad-popzero .pz-blink,.sp-popzero .pzs-btn{animation:blink 1.1s steps(1) infinite}
+.ad-popzero .pz-btn{flex:none;margin-left:auto;position:relative;background:#ff2bd6;color:#fff;border:3px solid;border-color:#ff9cf0 #7a0060 #7a0060 #ff9cf0;padding:6px 10px;font-size:20px;text-shadow:1px 1px 0 #7a0060}
+.rm-ad-box.ad-popzero:hover .pz-btn{background:#ff5ce2}
+.s468.ad-popzero .pz-logo{font-size:32px}.s468.ad-popzero .pz-tag{font-size:14px}.s468.ad-popzero .pz-btn{font-size:16px;padding:3px 8px}
+.s320.ad-popzero .pz-logo{font-size:24px;text-shadow:2px 2px 0 #ff2bd6}.s320.ad-popzero .pz-tag{font-size:13px}.s320.ad-popzero .pz-btn{font-size:14px;padding:2px 8px}
+.sp-box.sp-popzero{background:#14003a radial-gradient(ellipse at 50% 45%,#3d0aa0,#14003a 70%);border:4px solid;border-color:#b58cff #3a0f94 #3a0f94 #b58cff;color:#fff;text-align:center;padding:16px}
+.sp-popzero .pzs-top{font-size:22px;color:#00e5ff;position:relative}
+.sp-popzero .pzs-mid{display:flex;align-items:center;gap:22px;position:relative}
+.sp-popzero .pzs-can{image-rendering:pixelated;animation:pzbob 1.4s steps(2) infinite}
+.sp-popzero .pzs-name{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.sp-popzero .pzs-logo{font-weight:400;font-size:84px;line-height:.85;letter-spacing:3px;color:#ffe600;text-shadow:4px 4px 0 #ff2bd6,8px 8px 0 #3a0f94}
+.sp-popzero .pzs-tag{font-weight:400;font-size:24px;color:#00e5ff;margin-top:10px}
+.sp-popzero .pzs-line{font-size:24px;position:relative}
+.sp-popzero .pzs-btn{position:relative;background:#ff2bd6;color:#fff;border:3px solid;border-color:#ff9cf0 #7a0060 #7a0060 #ff9cf0;padding:6px 16px;font-size:22px}
+.sp-box.sp-popzero:hover .pzs-btn{background:#ff5ce2}
+@media (prefers-reduced-motion: reduce){.pz-stars i,.ad-popzero .pz-can,.ad-popzero .pz-blink,.sp-popzero .pzs-can,.sp-popzero .pzs-btn{animation:none}}
+

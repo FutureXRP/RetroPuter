@@ -1,3 +1,0 @@
-# Pre-launch: keep the site out of search engines. Replace with "Allow: /" at launch.
-User-agent: *
-Disallow: /
