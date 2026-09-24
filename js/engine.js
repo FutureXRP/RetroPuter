@@ -284,6 +284,7 @@ function applyWall() {
   desk.style.setProperty('--wall', w[1]);
   desk.style.background = w[1];
   desk.classList.toggle('weave', w[0] === 'weave');
+  screen.style.setProperty('--phos', w[1]);
 }
 
 /* ---------- window manager ---------- */
@@ -292,7 +293,7 @@ const wins = {};
 let zTop = 10, cascade = 0, tearing = false;
 function focusWin(W) {
   Object.values(wins).forEach(o => o.el.classList.toggle('active', o === W));
-  if (W) { W.el.style.zIndex = ++zTop; W.el.classList.remove('min'); W.minimized = false; }
+  if (W) { W.el.style.zIndex = ++zTop; W.el.classList.remove('min'); W.minimized = false; if (dos && document.activeElement === dos.input) dos.input.blur(); }
   renderTasks();
 }
 function activeWin() { return Object.values(wins).find(o => o.el.classList.contains('active') && !o.minimized); }
@@ -310,6 +311,7 @@ function closeWin(W) {
   W.el.remove(); delete wins[W.id];
   const rest = Object.values(wins).filter(o => !o.minimized).sort((a, b) => b.el.style.zIndex - a.el.style.zIndex);
   focusWin(rest[0] || null);
+  if (!rest.length) dosFocus();
 }
 function closeAll() {
   tearing = true;
@@ -322,7 +324,7 @@ function openWin(o) {
   sfx.seek(4);
   document.body.classList.add('wait'); setTimeout(() => document.body.classList.remove('wait'), 450);
   const el = document.createElement('div');
-  el.className = 'win';
+  el.className = 'win' + (o.modal ? ' modal' : '');
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', o.title);
   el.innerHTML = `<div class="tb"><span class="ico">${ICONS[o.icon] || ''}</span><span class="t"></span>${o.noMin ? '' : '<button class="tbb" data-a="min" aria-label="Minimize">_</button>'}${o.fixed ? '' : '<button class="tbb" data-a="max" aria-label="Maximize">□</button>'}<button class="tbb x" data-a="close" aria-label="Close">×</button></div><div class="body"></div>${o.fixed ? '' : '<div class="grip" aria-hidden="true"></div>'}`;
   el.querySelector('.t').textContent = o.title;
@@ -462,6 +464,9 @@ document.addEventListener('keydown', e => {
   if (!stageOn('st-desk')) return;
   const W = activeWin();
   if (W && W.onKey) W.onKey(e);
+  // In 1985 every full-screen program exits with Esc (the status bar says so). A program can opt out with W.keepEsc.
+  if (era.shell === 'dos' && W && !W.modal && e.key === 'Escape' && !W.keepEsc) { e.preventDefault(); closeWin(W); }
+  if (era.shell === 'dos' && !W && /^F(1|2|3|10)$/.test(e.key)) { e.preventDefault(); ({ F1: () => dosRun('HELP'), F2: dosMenu, F3: () => dosRun('DIR'), F10: () => openTW(dos.el.querySelector('.dos-tm')) })[e.key](); }
 });
 $('#st-desk').addEventListener('pointerdown', () => sfx.click());
 
@@ -1086,6 +1091,7 @@ async function downloaded(name, kb) {
 
 /* --- software store --- */
 const STORE_INFO = {
+  '1985': { name: 'Cardinal Software Catalog', sub: 'Order by mail. Programs arrive on 5¼" floppy disks in about 4 to 6 weeks. (Here, a little faster.)' },
   '1990': { name: 'Cardinal Software Catalog', sub: 'Mail-order software, shipped to your door on 3½" floppy disks.' },
   '1995': { name: 'CompuMart CD-ROM Superstore', sub: 'Hundreds of titles on CD-ROM. Multimedia! Sound! Up to 650 MB!' },
   '2000': { name: 'Download Depot Store', sub: 'Download it now, or get the CD if your modem is slow.' }
@@ -1133,7 +1139,7 @@ async function buy(id) {
   install(p);
 }
 function install(p) {
-  const media = era.id === '1990' ? 'floppy' : era.id === '1995' || !net.connected ? 'cd' : 'download';
+  const media = era.id === '1990' || era.id === '1985' ? 'floppy' : era.id === '1995' || !net.connected ? 'cd' : 'download';
   const kb = p.sizeKB || 1400;
   openWin({ id: 'inst:' + p.id, title: 'Setup - ' + p.label, icon: 'dl', w: 400, fixed: true, noMin: true, autoH: true, build(W) {
     W.body.innerHTML = `<div class="dl"><div class="inst-top">${media === 'download' ? ICONS.web : ICONS.dl}<div><b>${esc(p.label)} Setup</b><br><small data-what></small></div></div><div class="pb sunken"><div class="fill"></div></div><div data-info role="status"></div><div class="btns"><button class="btn" data-turbo hidden>Skip ahead (no fair)</button></div></div>`;
@@ -1155,8 +1161,8 @@ function install(p) {
     (async () => {
       let ok = true;
       if (media === 'floppy') {
-        const n = Math.max(1, Math.min(4, Math.ceil(kb / 1440)));
-        what.textContent = `${n} floppy disk${n > 1 ? 's' : ''}, 3½" high density`;
+        const disk = era.id === '1985' ? 360 : 1440, n = Math.max(1, Math.min(4, Math.ceil(kb / disk)));
+        what.textContent = `${n} floppy disk${n > 1 ? 's' : ''}, ${era.id === '1985' ? '5¼" 360 KB' : '3½" high density'}`;
         for (let i = 1; i <= n && ok; i++) {
           if (i > 1) { const r = await msgBox('Setup', `Please insert Disk ${i} of ${n} into drive A: and press OK.`, ['OK']); if (r === null || !alive) { ok = false; break; } }
           sfx.floppy();
@@ -1183,7 +1189,7 @@ function install(p) {
 }
 
 /* --- My Computer / File Manager --- */
-const DISK = { '1990': 80, '1995': 850, '2000': 20480 };
+const DISK = { '1985': 10, '1990': 80, '1995': 850, '2000': 20480 };
 function openFiles() {
   let path = 'C:\\';
   const title = era.shell === 'start' ? 'My Computer' : 'File Manager';
@@ -1267,7 +1273,7 @@ function openSettings() {
     era.walls.forEach(([k, c, l, sw]) => {
       const x = document.createElement('button'); x.style.background = sw || c; x.title = l; x.setAttribute('aria-label', l);
       x.setAttribute('aria-pressed', eraCfg().wall === k);
-      x.onclick = () => { eraCfg().wall = k; applyWall(); saveSettings(); $$('button', sws).forEach(y => y.setAttribute('aria-pressed', y === x)); };
+      x.onclick = () => { eraCfg().wall = k; applyWall(); saveSettings(); if (dos) dos.el.style.setProperty('--phos', c); $$('button', sws).forEach(y => y.setAttribute('aria-pressed', y === x)); };
       sws.appendChild(x);
     });
     b.querySelector('[data-tw]').onclick = e => openTW(e.currentTarget);
@@ -1720,6 +1726,153 @@ function tickClock() {
 }
 setInterval(tickClock, 15000);
 
+/* ---------- 1985: the DOS command line ---------- */
+// Programs get a DOS command name from their `cmd` field (or their id), shown as NAME.EXE in C:\PROGRAMS.
+const dosCmd = a => ((PLUGINS[a.id] && PLUGINS[a.id].cmd) || a.id).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const DOS_FIXED = {
+  'AUTOEXEC.BAT': '@ECHO OFF\nPROMPT $P$G\nPATH C:\;C:\\PROGRAMS;C:\\GAMES\nECHO Welcome! Type HELP for commands, or MENU for a menu.',
+  'CONFIG.SYS': 'FILES=20\nBUFFERS=15',
+  'COMMAND.COM': null
+};
+let dos = null;
+function dosTree() {
+  const run = apps().filter(a => a.id !== 'readme' && a.id !== 'files');
+  const games = run.filter(a => a.cat === 'game'), progs = run.filter(a => a.cat !== 'game');
+  const docs = { 'README.TXT': era.files['README.TXT'], 'MYNOTES.TXT': store.get('mynotes', '') };
+  Object.keys(era.files).forEach(f => { if (f !== 'README.TXT' && estore.get('got:' + f, false)) docs[f] = era.files[f]; });
+  const exe = list => Object.fromEntries(list.map(a => [dosCmd(a) + '.EXE', { app: a }]));
+  return {
+    '': Object.assign({ PROGRAMS: 'dir', GAMES: 'dir' }, DOS_FIXED, docs),
+    PROGRAMS: exe(progs),
+    GAMES: exe(games)
+  };
+}
+function buildDosShell() {
+  const el = document.createElement('div'); el.id = 'dos';
+  el.innerHTML = `<div class="dos-out" aria-live="polite"></div><div class="dos-line"><span class="dos-pr"></span><input class="dos-in" spellcheck="false" autocomplete="off" autocapitalize="characters" aria-label="Type a command"></div>
+    <div class="dos-bar"><button data-k="help">F1 HELP</button><button data-k="menu">F2 PROGRAMS</button><button data-k="dir">F3 FILES</button><button data-k="tm" class="dos-tm">F10 TIME MACHINE</button><button data-k="off">OFF</button></div>`;
+  layer.prepend(el);
+  dos = { el, out: el.querySelector('.dos-out'), input: el.querySelector('.dos-in'), pr: el.querySelector('.dos-pr'), cwd: '', hist: [], hi: 0 };
+  const phos = () => (era.walls.find(w => w[0] === eraCfg().wall) || era.walls[0])[1];
+  el.style.setProperty('--phos', phos());
+  dosPrompt();
+  dosPrint('Horizon DOS Version 2.11\n\nNew here? Type HELP and press Enter, or tap PROGRAMS below for a menu.\nTo visit another year, type 1990, 1995 or 2000, or tap TIME MACHINE.\n');
+  el.querySelector('.dos-bar').addEventListener('click', e => {
+    const b = e.target.closest('[data-k]'); if (!b) return; sfx.key();
+    ({ help: () => dosRun('HELP'), menu: dosMenu, dir: () => dosRun('DIR'), tm: () => openTW(el.querySelector('.dos-tm')), off: askShutdown })[b.dataset.k]();
+  });
+  dos.input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const v = dos.input.value; dos.input.value = ''; dosRun(v); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (dos.hi > 0) dos.input.value = dos.hist[--dos.hi] || ''; }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); dos.hi = Math.min(dos.hist.length, dos.hi + 1); dos.input.value = dos.hist[dos.hi] || ''; }
+    else if (e.key.length === 1 || e.key === 'Backspace') sfx.key();
+  });
+  el.addEventListener('pointerup', e => { if (!e.target.closest('button') && !getSelection().toString()) dosFocus(); });
+  dosFocus();
+}
+function dosFocus() { if (dos && !activeWin()) setTimeout(() => dos && dos.input.focus({ preventScroll: true }), 0); }
+function dosPrompt() { dos.pr.textContent = 'C:\\' + dos.cwd + '>'; }
+function dosPrint(text) {
+  dos.out.appendChild(document.createTextNode(text.endsWith('\n') ? text : text + '\n'));
+  while (dos.out.childNodes.length > 400) dos.out.firstChild.remove();
+  dos.el.scrollTop = dos.el.scrollHeight;
+}
+function dosPath(arg) {
+  let p = arg.toUpperCase().replace(/\//g, '\\').replace(/^C:/, '');
+  if (p.startsWith('\\')) p = p.slice(1); else if (dos.cwd && p) p = dos.cwd + '\\' + p;
+  const parts = []; p.split('\\').forEach(s => { if (!s || s === '.') return; if (s === '..') parts.pop(); else parts.push(s); });
+  return parts.join('\\');
+}
+function dosRun(line) {
+  const raw = String(line).trim();
+  dosPrint(dos.pr.textContent + raw);
+  if (raw) { dos.hist.push(raw); dos.hi = dos.hist.length; }
+  if (!raw) return;
+  const m = raw.match(/^(\S+?)(?:\s+(.*))?$/) || [], cmd = (m[1] || '').toUpperCase().replace(/\.(EXE|COM|BAT)$/, ''), arg = (m[2] || '').trim();
+  const T = dosTree(), here = T[dos.cwd] || {};
+  const findApp = name => { for (const dir of ['', 'PROGRAMS', 'GAMES']) { const f = (T[dir] || {})[name + '.EXE']; if (f) return f.app; } return null; };
+  const cmds = {
+    HELP: () => dosPrint(`Commands you can type:
+  DIR          list files            CD name     go into a folder (CD \\ = top)
+  TYPE file    show a text file      CLS         clear the screen
+  MENU         program menu          CATALOG     the mail-order software catalog
+  EDIT         write notes           CONTROL     settings (sound, screen color)
+  COLOR        change screen color   VER, DATE, TIME, MEM   system info
+  1990  1995  2000   travel to another year          OFF    turn off
+Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES)[0] ? Object.keys(T.GAMES)[0].replace('.EXE', '') : 'CALC'}.`),
+    '?': () => cmds.HELP(),
+    CLS: () => { dos.out.textContent = ''; },
+    VER: () => dosPrint('\nHorizon DOS Version 2.11\n'),
+    DATE: () => { const d = new Date(); dosPrint(`Current date is ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(1985, d.getMonth(), d.getDate()).getDay()]} ${d.getMonth() + 1}-${d.getDate()}-1985`); },
+    TIME: () => dosPrint('Current time is ' + new Date().toLocaleTimeString([], { hour12: false })),
+    MEM: () => dosPrint('\n   655360 bytes total memory\n   591200 bytes free\n'),
+    ECHO: () => dosPrint(arg || 'ECHO is on'),
+    DIR: () => {
+      const p = arg ? dosPath(arg) : dos.cwd, d = T[p];
+      if (!d) { dosPrint('File not found'); return; }
+      const rows = Object.entries(d).map(([n, v]) => {
+        const [base, ext = ''] = n.split('.'), isDir = v === 'dir';
+        const size = isDir ? '<DIR>   ' : String(v && v.app ? ((PLUGINS[v.app.id] && PLUGINS[v.app.id].sizeKB) || 48) * 1024 : typeof v === 'string' ? v.length : 25307).padStart(8);
+        return `${base.padEnd(8)} ${ext.padEnd(3)} ${size}   1-01-85  12:00p`;
+      });
+      dosPrint(`\n Volume in drive C is HORIZON\n Directory of  C:\\${p}\n\n${rows.join('\n')}\n        ${rows.length} File(s)   ${(9 - rows.length * 0.05).toFixed(2)}M bytes free\n`);
+    },
+    CD: () => {
+      if (!arg) { dosPrint('C:\\' + dos.cwd); return; }
+      const p = dosPath(arg);
+      if (p === '' || T[p]) { dos.cwd = p; dosPrompt(); } else dosPrint('Invalid directory');
+    },
+    CHDIR: () => cmds.CD(),
+    TYPE: () => {
+      const f = here[arg.toUpperCase()] ?? T[''][arg.toUpperCase()];
+      if (typeof f === 'string') dosPrint(f || '(empty file)');
+      else if (f === null || (f && f.app)) dosPrint('\u263a\u2665\u266a\u25ba\u2022 \u00b6\u00a7 That is a program, not text. It looks like gibberish. Type its name to run it.');
+      else dosPrint('File not found - ' + arg.toUpperCase());
+    },
+    EDIT: () => openNotepad('MYNOTES.TXT'),
+    MENU: () => dosMenu(),
+    CATALOG: () => openStore(),
+    CONTROL: () => openSettings(),
+    COLOR: () => { const i = era.walls.findIndex(w => w[0] === eraCfg().wall); eraCfg().wall = era.walls[(i + 1) % era.walls.length][0]; saveSettings(); dos.el.style.setProperty('--phos', era.walls[(i + 1) % era.walls.length][1]); },
+    OFF: () => askShutdown(), SHUTDOWN: () => askShutdown(), EXIT: () => askShutdown(),
+    TIMEMACHINE: () => openTW(dos.el.querySelector('.dos-tm')), TM: () => cmds.TIMEMACHINE(),
+    WIN: () => dosPrint('Windows? Pictures? A mouse? Those are coming in a few years.\nType 1990 to jump ahead and see.'),
+    FORMAT: () => dosPrint('Nice try. This museum computer is protected. (In 1985, FORMAT C: really would erase everything.)'),
+    DEL: () => dosPrint('Access denied. This museum computer is protected.'), ERASE: () => cmds.DEL(),
+    DIAL: () => { const a = findApp('TERMINAL') || findApp('BBS'); a ? a.open() : dosPrint('No terminal program is installed. Check the CATALOG.'); }
+  };
+  if (/^(19(85|90|95)|2000)$/.test(cmd)) { if (cmd === era.id) dosPrint('You are already in ' + cmd + '.'); else switchEra(cmd); return; }
+  if (cmds[cmd]) { cmds[cmd](); return; }
+  const a = findApp(cmd);
+  if (a) { dosPrint(''); a.open(); return; }
+  const low = cmd.toLowerCase();
+  const future = Object.values(PLUGINS).find(p => dosCmd({ id: p.id }) === cmd || p.id === low);
+  if (future && future.kind === 'store' && !isOwned(future.id) && future.year <= era.year) { dosPrint(`${future.label} isn't installed. Type CATALOG to order it.`); return; }
+  dosPrint('Bad command or file name');
+}
+function dosMenu() {
+  const items = [
+    ...apps().filter(a => !['files', 'readme', 'cp', 'store'].includes(a.id)).map(a => ({ label: a.label, hint: dosCmd(a), fn: a.open })),
+    { label: 'Read Me', hint: 'TYPE README.TXT', fn: () => openNotepad('README.TXT') },
+    { label: 'Software Catalog', hint: 'CATALOG', fn: () => openStore() },
+    { label: 'Control Panel', hint: 'CONTROL', fn: openSettings },
+    { label: 'Time Machine: visit another year', hint: '1990', fn: () => openTW(dos.el.querySelector('.dos-tm')) },
+    { label: 'Turn off the computer', hint: 'OFF', fn: askShutdown }
+  ];
+  openWin({ id: 'dosmenu', title: 'PROGRAM MENU', icon: null, w: 460, fixed: true, autoH: true, build(W) {
+    W.body.innerHTML = `<div class="dos-menu"><p>Use the arrow keys and Enter, or tap a line.</p><ol>${items.map((it, i) => `<li><button data-i="${i}"><b>${esc(it.label)}</b><small>${esc(it.hint)}</small></button></li>`).join('')}</ol></div>`;
+    let sel = 0; const btns = $$('button', W.body);
+    const hi = () => btns.forEach((b, i) => b.classList.toggle('on', i === sel));
+    btns.forEach((b, i) => b.onclick = () => { closeWin(W); items[i].fn(); });
+    W.onKey = e => {
+      if (e.key === 'ArrowDown') { sel = (sel + 1) % items.length; hi(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { sel = (sel - 1 + items.length) % items.length; hi(); e.preventDefault(); }
+      else if (e.key === 'Enter') { e.preventDefault(); closeWin(W); items[sel].fn(); }
+    };
+    hi(); setTimeout(() => btns[0] && btns[0].focus(), 30);
+  }});
+}
+
 /* ---------- time machine ---------- */
 function setEra(id) {
   era = ERAS[id] || ERAS[ERA_IDS[0]];
@@ -1771,7 +1924,7 @@ function teardown() {
   if (net.connected) hangUp();
   net.dropped = false;
   stopMusic(); wake(); closeMenu(); closeStart(); closeTW(); closeAll();
-  $$('#deskicons').forEach(x => x.remove());
+  $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   document.body.classList.remove('wait');
   visited.clear();
 }
@@ -1825,9 +1978,9 @@ function toDesktop() {
   booted = true; skipping = true;
   $('#skip').classList.remove('on');
   show('st-desk'); idleT = Date.now();
-  $$('#deskicons').forEach(x => x.remove());
+  $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   setupTaskbar();
-  if (era.shell === 'start') buildStartShell(); else openProgman();
+  if (era.shell === 'start') buildStartShell(); else if (era.shell === 'dos') buildDosShell(); else openProgman();
   allowance();
   // A shared home-page link (#1995&page=…) opens straight to that page, already online.
   if (HASH.page && !HASH.opened && era.apps.includes('nv')) {
@@ -1836,7 +1989,7 @@ function toDesktop() {
   }
   const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
   if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
-  if (!estore.get('seenReadme', false)) { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
+  if (!estore.get('seenReadme', false) && era.shell !== 'dos') { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
 }
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
 $('#skip').onclick = () => { skipping = true; sfx[era.sounds.start](); toDesktop(); };
@@ -1880,6 +2033,6 @@ if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
 };
 
 /* ---------- start ---------- */
-setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERA_IDS[0]));
+setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERAS['1990'] ? '1990' : ERA_IDS[0]));
 renderPower();
 })();

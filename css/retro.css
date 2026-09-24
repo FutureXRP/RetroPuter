@@ -495,3 +495,49 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .fm-list{flex:1;overflow:auto;background:#fff;display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));align-content:start;gap:8px 4px;padding:8px}
 .fm-empty{grid-column:1/-1;color:#666;margin:6px}
 .fm-st{font-size:11px;padding:0 2px}
+
+/* ---- 1985: DOS text mode ---- */
+.era-1985{--ui:var(--dos)}
+.era-1985 #st-desk{background:#000 !important}
+.era-1985 #tasks{display:none}
+.era-1985 #layer{bottom:0}
+#dos{position:absolute;inset:0;background:#000;color:var(--phos,#33ff66);font:clamp(17px,2.4vw,22px)/1.2 var(--dos);padding:10px 12px 52px;overflow-y:auto;z-index:1;text-shadow:0 0 6px color-mix(in srgb,var(--phos,#33ff66) 55%,transparent)}
+#dos .dos-out{white-space:pre-wrap;word-break:break-word}
+#dos .dos-line{display:flex;align-items:baseline}
+#dos .dos-pr{white-space:pre}
+#dos .dos-in{flex:1;min-width:0;background:transparent;border:0;box-shadow:none;padding:0;color:inherit;font:inherit;text-transform:uppercase;caret-color:var(--phos,#33ff66);outline:none;text-shadow:inherit}
+#dos .dos-bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:4px;flex-wrap:wrap;padding:6px;background:#000;border-top:1px solid color-mix(in srgb,var(--phos,#33ff66) 50%,transparent);z-index:2}
+#dos .dos-bar button{background:var(--phos,#33ff66);color:#000;border:0;font:clamp(15px,2vw,19px) var(--dos);padding:6px 10px;cursor:pointer;min-height:40px}
+#dos .dos-bar button.dos-tm{margin-left:auto;animation:dosglow 2.4s ease-in-out infinite}
+#dos .dos-bar button:focus-visible{outline:2px dashed var(--phos,#33ff66);outline-offset:2px}
+@keyframes dosglow{50%{box-shadow:0 0 12px var(--phos,#33ff66)}}
+.era-1985 .win{background:#000;color:var(--phos,#33ff66);border:2px double var(--phos,#33ff66);box-shadow:none;padding:2px;font-family:var(--dos);font-size:18px}
+.era-1985 .win:not(.modal){left:0 !important;top:0 !important;width:100% !important;height:100% !important;border:0;padding:0}
+.era-1985 .win .tb,.era-1985 .win.active .tb{background:var(--phos,#33ff66);color:#000;font:18px var(--dos)}
+.era-1985 .win .tb .ico{display:none}
+.era-1985 .win .tbb{background:#000;color:var(--phos,#33ff66);border:0;box-shadow:none;width:auto;padding:0 6px;font:16px var(--dos)}
+.era-1985 .win .tbb[data-a=min],.era-1985 .win .tbb[data-a=max],.era-1985 .win .grip{display:none}
+.era-1985 .win .tbb.x{font-size:0;min-width:44px}
+.era-1985 .win .tbb.x::before{content:'Esc';font:16px var(--dos)}
+.era-1985 .calc .scr{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66)}
+.era-1985 .calc .op{color:inherit}
+.era-1985 .menubar{border-bottom:1px solid var(--phos,#33ff66)}
+.era-1985 .mi{color:var(--phos,#33ff66);font:17px var(--dos)}
+.era-1985 .mi:hover,.era-1985 .mi.open,.era-1985 .menu button:hover{background:var(--phos,#33ff66);color:#000}
+.era-1985 .menu{background:#000;color:var(--phos,#33ff66);border:2px double var(--phos,#33ff66);box-shadow:none}
+.era-1985 .btn{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66);box-shadow:none;font:17px var(--dos)}
+.era-1985 .btn:hover,.era-1985 .btn:focus-visible{background:var(--phos,#33ff66);color:#000}
+.era-1985 .dlg .row svg{display:none}
+.era-1985 .np textarea,.era-1985 input[type=text],.era-1985 textarea,.era-1985 select{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66);box-shadow:none;font:18px var(--dos)}
+.era-1985 .shop,.era-1985 .shop-item,.era-1985 .shop-later,.era-1985 .cp fieldset{background:#000;color:var(--phos,#33ff66);border-color:var(--phos,#33ff66)}
+.era-1985 .shop-hd{background:var(--phos,#33ff66);color:#000}
+.era-1985 .shop-txt small,.era-1985 .shop-later{color:inherit;opacity:.8}
+.era-1985 .shop-buy .price,.era-1985 .shop-buy .own,.era-1985 .shop-wallet b{color:inherit}
+.era-1985 .sunken{border-color:var(--phos,#33ff66);box-shadow:none}
+.era-1985 .pb .fill{background:repeating-linear-gradient(90deg,var(--phos,#33ff66) 0 10px,transparent 10px 12px)}
+.dos-menu{padding:10px 14px}
+.dos-menu p{margin:0 0 8px}
+.dos-menu ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.dos-menu button{display:flex;justify-content:space-between;gap:12px;width:100%;background:transparent;color:inherit;border:0;padding:8px 10px;font:19px var(--dos);cursor:pointer;text-align:left;min-height:44px;align-items:center}
+.dos-menu button small{opacity:.7;font-size:15px}
+.dos-menu button.on,.dos-menu button:hover,.dos-menu button:focus-visible{background:var(--phos,#33ff66);color:#000;outline:none}
