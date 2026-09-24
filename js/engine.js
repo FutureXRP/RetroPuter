@@ -516,6 +516,8 @@ function appApi(p, W) {
     setTitle: t => setTitle(W, t), close: () => closeWin(W),
     playMusic: song => playMusic(song, p.id), stopMusic: () => stopMusic(p.id),
     earn: (amt, why) => earn(amt, why),
+    say: (text, o = {}) => say(text, o),
+    dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
     openApp
   };
@@ -560,6 +562,16 @@ function allowance() {
   const first = store.get('allowanceDay', '') === '';
   store.set('allowanceDay', day);
   if (!first) { setWallet(wallet() + ALLOWANCE); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance. Spend it at the Software Store!`), 1500); }
+}
+// Read text aloud for young players (Web Speech API). Silent if unsupported or the volume is at zero.
+function say(text, o = {}) {
+  try {
+    if (!window.speechSynthesis || settings.vol <= 0) return false;
+    if (o.interrupt !== false) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.rate = o.rate || 1; u.pitch = o.pitch || 1.1; u.volume = Math.min(1, settings.vol * 1.4);
+    speechSynthesis.speak(u); return true;
+  } catch (e) { return false; }
 }
 let toastT = 0;
 function toast(text) {
@@ -828,7 +840,29 @@ const gb = {
   }
 };
 // Everything an era's page() function may use.
-const H = { A, APP: APPLINK, esc, store: estore, NEWGIF, CONSTRUCTION, rateKB, fmtTime, fmtBps, effBps, dlTable, bindDownloads, gb, playMusic, stopMusic, msgBox, openApp, get sites() { return era.sites; }, get user() { return store.get('user', 'kidsurfer'); }, conn };
+/* Extra fake-web pages live in js/web/*.js and register on window.RETRO_SITES:
+   { eras: ['1995', '2000'] or '*', url: 'http://…/' or match: url => bool, page: (url, h) => ({ title, cls, blocks, after }),
+     search: [{ title, url, desc, keywords }] }  (search entries feed each year's search engine through h.search) */
+const SITES = window.RETRO_SITES || [];
+const SHARE_URL = 'http://www.cyberburbs.com/shared/'; // where a shared home page (#year&page=…) is shown
+const siteOn = s => s.eras === '*' || (s.eras || []).includes(era.id);
+function sitePage(url) {
+  for (const s of SITES) if (siteOn(s) && (s.url ? s.url === url : s.match && s.match(url))) return s.page(url, H);
+  return null;
+}
+function siteSearch(q) {
+  const words = String(q).toLowerCase().split(/\W+/).filter(w => w.length > 1);
+  const out = [];
+  SITES.filter(siteOn).forEach(s => (s.search || []).forEach(e => {
+    const hay = (e.title + ' ' + (e.desc || '') + ' ' + (e.keywords || '')).toLowerCase();
+    const n = words.filter(w => hay.includes(w)).length;
+    if (n) out.push(Object.assign({ score: n }, e));
+  }));
+  return out.sort((a, b) => b.score - a.score);
+}
+// URL hash: #1995 or #1995&page=… (extra params are passed to pages, e.g. a shared home page)
+const HASH = (() => { const parts = location.hash.replace(/^#/, '').split('&'), o = { era: parts.shift() }; parts.forEach(p => { const i = p.indexOf('='); if (i > 0) o[decodeURIComponent(p.slice(0, i))] = decodeURIComponent(p.slice(i + 1)); }); return o; })();
+const H = { search: siteSearch, param: k => HASH[k], appLoad: (app, k, d) => store.get('app:' + app + ':' + k, d), era: () => ({ id: era.id, year: era.year }), A, APP: APPLINK, esc, store: estore, NEWGIF, CONSTRUCTION, rateKB, fmtTime, fmtBps, effBps, dlTable, bindDownloads, gb, playMusic, stopMusic, msgBox, openApp, get sites() { return era.sites; }, get user() { return store.get('user', 'kidsurfer'); }, conn };
 
 let music = null;
 function playMusic(song, owner = 'web') {
@@ -862,7 +896,7 @@ function playMusic(song, owner = 'web') {
 }
 function stopMusic(owner) { if (music && (!owner || music.owner === owner)) { music.stop(); music = null; } }
 
-function openBrowser() {
+function openBrowser(startUrl) {
   const B = era.browser;
   const W = openWin({ id: 'nv', title: B.name, icon: 'web', w: B.w || 640, h: B.h || 470, build(W) {
     menubar(W, [
@@ -917,7 +951,7 @@ function openBrowser() {
       await sleep((500 + Math.random() * 600) * lat); if (my !== token) return;
       document.body.classList.remove('wait');
       visited.add(url);
-      const P = era.page(url, H);
+      const P = sitePage(url) || era.page(url, H);
       setTitle(W, B.name + ' - [' + P.title + ']');
       pg.scrollTop = 0;
       pg.innerHTML = `<div class="web ${P.cls}">${P.blocks.map(b => `<div class="blk">${b}</div>`).join('')}</div>`;
@@ -981,8 +1015,10 @@ function openBrowser() {
     W.onMin = () => stopMusic('web');
     W.onNet = () => { if (!net.connected) { stop(); stopMusic('web'); st.textContent = 'Connection lost'; } };
     syncBtns();
-    setTimeout(() => nav(era.sites.home), 50);
+    setTimeout(() => nav(startUrl || era.sites.home), 50);
   }});
+  if (startUrl && W.nav && W._built) W.nav(startUrl);
+  W._built = true;
   return W;
 }
 
@@ -1793,6 +1829,11 @@ function toDesktop() {
   setupTaskbar();
   if (era.shell === 'start') buildStartShell(); else openProgman();
   allowance();
+  // A shared home-page link (#1995&page=…) opens straight to that page, already online.
+  if (HASH.page && !HASH.opened && era.apps.includes('nv')) {
+    HASH.opened = true;
+    setTimeout(() => { if (!booted) return; net.connected = true; net.since = Date.now(); refreshTray(); toast('Connected. Opening the home page someone shared with you…'); openBrowser(SHARE_URL); }, 700);
+  }
   const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
   if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
   if (!estore.get('seenReadme', false)) { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
@@ -1839,7 +1880,6 @@ if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
 };
 
 /* ---------- start ---------- */
-const fromHash = location.hash.replace('#', '');
-setEra(ERAS[fromHash] ? fromHash : store.get('era', ERA_IDS[0]));
+setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERA_IDS[0]));
 renderPower();
 })();
