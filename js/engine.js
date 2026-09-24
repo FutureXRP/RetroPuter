@@ -2161,18 +2161,20 @@ function layoutRoom() {
   room.querySelector('.rm-desk').style.top = (top + 62 * u) + 'px';
   fitScreen();
 }
-/* A sample "house" ad in the slot, until a real advertiser or ad network fills it.
-   To use real ad code, replace the contents of .rm-ad-box (keep the size). */
+/* The desk's ad slot. Ads come from js/ads.js (window.RETRO_ADS); one is chosen per visit. */
+const AD = (() => { const list = (window.RETRO_ADS || []).filter(a => a && a.href && a.html); return list.length ? list[Math.random() * list.length | 0] : null; })();
 function placeAd(size, x, y) {
   const el = room.querySelector('.rm-ad');
-  if (!size) { el.hidden = true; return; }
+  if (!size || !AD) { el.hidden = true; return; }
   const [w, h] = size, key = w + 'x' + h;
   el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
   const box = el.querySelector('.rm-ad-box');
   box.style.width = w + 'px'; box.style.height = h + 'px';
   if (box.dataset.size === key) return;
-  box.dataset.size = key; box.className = 'rm-ad-box s' + w;
-  box.innerHTML = `<span class="ad-ico">${ICONS.pc}</span><span class="ad-txt"><b>Your brand here</b><span>Reach families and retro fans on RetroPuter</span></span><span class="ad-dim">${w}×${h}</span>`;
+  box.dataset.size = key; box.className = `rm-ad-box s${w} ad-${AD.id}`;
+  box.href = AD.href; box.setAttribute('aria-label', AD.label + ' (advertisement)');
+  if (AD.newTab !== false) { box.target = '_blank'; box.rel = 'sponsored noopener'; } else { box.removeAttribute('target'); box.rel = 'sponsored'; }
+  box.innerHTML = AD.html(w, h);
 }
 function glass() { const g = room.querySelector('.glass'); return g ? g.getBoundingClientRect() : { left: 0, top: 0, width: VW, height: VH }; }
 const fitTransform = g => `translate(${g.left}px,${g.top}px) scale(${g.width / VW})`;
