@@ -328,7 +328,8 @@ function openWin(o) {
   el.querySelector('.t').textContent = o.title;
   layer.appendChild(el);
   const W = { id: o.id, el, title: o.title, icon: o.icon, body: el.querySelector('.body'), modal: !!o.modal };
-  const L = { width: layer.clientWidth, height: layer.clientHeight }; // not getBoundingClientRect: the power-on animation scales the screen
+  // Not getBoundingClientRect: the power-on animation scales the screen. Fall back to the viewport if the desktop is not laid out yet.
+  const L = { width: layer.clientWidth || innerWidth, height: layer.clientHeight || innerHeight - 34 };
   const narrow = L.width < 640;
   const w = Math.min(o.w || 420, L.width - 8), h = Math.min(o.h || 300, L.height - 8);
   let left, top;
