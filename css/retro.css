@@ -700,3 +700,28 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .sp-box.sp-popzero:hover .pzs-btn{background:#ff5ce2}
 @media (prefers-reduced-motion: reduce){.pz-stars i,.ad-popzero .pz-can,.ad-popzero .pz-blink,.sp-popzero .pzs-can,.sp-popzero .pzs-btn{animation:none}}
 
+
+/* ---- Quick Help guide (first visit to each year) ---- */
+.qh{display:flex;flex-direction:column;height:100%;background:#fff;color:#000}
+.qh-page{flex:1;min-height:0;overflow:auto;padding:10px 14px;line-height:1.45}
+.qh-page:focus{outline:none}
+.qh-page h3{margin:0 0 6px;font-size:18px;color:#000080}
+.qh-page h4{margin:12px 0 4px;font-size:13px;color:#800000;border-bottom:1px solid #c0c0c0}
+.qh-page p{margin:4px 0}
+.qh-big{font-size:14px}
+.qh-page ul{margin:4px 0;padding-left:20px}
+.qh-page li{margin:3px 0}
+.qh-page code{font:15px var(--dos);background:#eee;padding:0 3px}
+.qh-page dl{margin:4px 0}
+.qh-page dt{display:flex;align-items:center;gap:6px;margin-top:6px}
+.qh-page dt svg{width:20px;height:20px;flex:none}
+.qh-page dd{margin:0 0 0 26px;color:#333}
+.qh-nav{display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid #808080;background:var(--gray,#c0c0c0)}
+.qh-nav .qh-dots{flex:1;text-align:center}
+.qh-nav .btn{min-width:72px}
+.era-1985 .qh,.era-1985 .qh-nav{background:#000;color:var(--phos,#33ff66)}
+.era-1985 .qh-page h3,.era-1985 .qh-page h4,.era-1985 .qh-page dd{color:var(--phos,#33ff66)}
+.era-1985 .qh-page h4{border-color:var(--phos,#33ff66)}
+.era-1985 .qh-page code{background:none;text-decoration:underline}
+.era-1985 .qh-page dt svg{display:none}
+.era-1985 .qh-nav{border-color:var(--phos,#33ff66)}

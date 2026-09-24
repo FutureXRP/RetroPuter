@@ -1467,11 +1467,11 @@
     music: SVG('<rect x="2" y="3" width="28" height="26" fill="#fff" stroke="#000"/><g fill="#c0c0c0"><rect x="2" y="9" width="28" height="1"/><rect x="2" y="15" width="28" height="1"/><rect x="2" y="21" width="28" height="1"/><rect x="9" y="3" width="1" height="26"/><rect x="16" y="3" width="1" height="26"/><rect x="23" y="3" width="1" height="26"/></g><rect x="3" y="22" width="6" height="6" fill="#e03030"/><rect x="10" y="16" width="6" height="5" fill="#f08020"/><rect x="17" y="10" width="6" height="5" fill="#30a030"/><rect x="24" y="4" width="5" height="5" fill="#3060e0"/><rect x="17" y="22" width="6" height="6" fill="#c08000"/>')
   };
   APPS.push(
-    { id: 'write', get label() { return screenEra() === '1990' ? 'Write' : 'Horizon Writer'; }, kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.write, window: { w: 660, h: 480 }, css: WRITE_CSS, open: openWrite },
-    { id: 'calendar', label: 'Calendar', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.calendar, window: { w: 600, h: 440 }, css: CAL_CSS, open: openCalendar },
-    { id: 'cardfile', label: 'Cardfile', kind: 'builtin', cat: 'acc', eras: ['1990', '1995'], icon: ICON.cardfile, window: { w: 520, h: 400 }, css: CF_CSS, open: openCardfile },
-    { id: 'clock', label: 'Clock', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.clock, window: { w: 320, h: 400 }, css: CLOCK_CSS, open: openClock },
-    { id: 'cdplayer', label: 'CD Player', kind: 'builtin', cat: 'acc', eras: ['1995', '2000'], icon: ICON.cdplayer, window: { w: 420, h: 440 }, css: CD_CSS, open: openCD },
-    { id: 'music', label: 'Music Maker', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.music, window: { w: 660, h: 470 }, css: MM_CSS, open: openMusic }
+    { id: 'write', help: 'A word processor: type letters and stories with bold, italics and fonts.', get label() { return screenEra() === '1990' ? 'Write' : 'Horizon Writer'; }, kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.write, window: { w: 660, h: 480 }, css: WRITE_CSS, open: openWrite },
+    { id: 'calendar', help: 'Keep track of birthdays and plans, month by month.', label: 'Calendar', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.calendar, window: { w: 600, h: 440 }, css: CAL_CSS, open: openCalendar },
+    { id: 'cardfile', help: 'Index cards for addresses, recipes or anything you want to remember.', label: 'Cardfile', kind: 'builtin', cat: 'acc', eras: ['1990', '1995'], icon: ICON.cardfile, window: { w: 520, h: 400 }, css: CF_CSS, open: openCardfile },
+    { id: 'clock', help: 'A clock with an alarm and a stopwatch.', label: 'Clock', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.clock, window: { w: 320, h: 400 }, css: CLOCK_CSS, open: openClock },
+    { id: 'cdplayer', help: 'Play the music CD in the drive, with shuffle and repeat.', label: 'CD Player', kind: 'builtin', cat: 'acc', eras: ['1995', '2000'], icon: ICON.cdplayer, window: { w: 420, h: 440 }, css: CD_CSS, open: openCD },
+    { id: 'music', help: 'Compose your own songs on a grid of notes and play them back.', label: 'Music Maker', kind: 'builtin', cat: 'acc', eras: ['1990', '1995', '2000'], icon: ICON.music, window: { w: 660, h: 470 }, css: MM_CSS, open: openMusic }
   );
 })();

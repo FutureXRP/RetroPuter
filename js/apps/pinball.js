@@ -52,7 +52,7 @@
   function norm(x, y) { const l = Math.hypot(x, y); return [x / l, y / l]; }
 
   (window.RETRO_APPS = window.RETRO_APPS || []).push({
-    id: 'pinball',
+    id: 'pinball', help: 'A space pinball table with flippers, bumpers and high scores.',
     label: 'Nebula Pinball',
     kind: 'builtin',
     eras: ['2000'],

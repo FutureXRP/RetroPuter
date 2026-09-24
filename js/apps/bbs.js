@@ -594,7 +594,7 @@ every life form, including new users.
   const ICON = '<svg viewBox="0 0 32 32" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="4" width="28" height="20" fill="#c0c0c0" stroke="#000"/><rect x="5" y="7" width="22" height="14" fill="#000"/><g fill="#3f6"><rect x="7" y="9" width="8" height="2"/><rect x="7" y="13" width="12" height="2"/><rect x="7" y="17" width="3" height="2"/><rect x="11" y="17" width="2" height="2"/></g><rect x="10" y="24" width="12" height="3" fill="#808080" stroke="#000"/><rect x="6" y="27" width="20" height="3" fill="#c0c0c0" stroke="#000"/></svg>';
 
   (window.RETRO_APPS = window.RETRO_APPS || []).push({
-    id: 'terminal',
+    id: 'terminal', help: 'Call bulletin boards (BBSes) with the modem: messages, files and games.',
     label: 'Terminal',
     kind: 'builtin',
     eras: ['1985'],

@@ -1310,9 +1310,9 @@
   const ICON_SPIDER = svg('<rect x="6" y="3" width="20" height="26" fill="#fff" stroke="#000"/><g fill="#111"><rect x="14" y="10" width="4" height="4"/><rect x="13" y="14" width="6" height="7"/><rect x="9" y="11" width="4" height="1"/><rect x="8" y="12" width="1" height="3"/><rect x="19" y="11" width="4" height="1"/><rect x="23" y="12" width="1" height="3"/><rect x="9" y="16" width="4" height="1"/><rect x="8" y="17" width="1" height="3"/><rect x="19" y="16" width="4" height="1"/><rect x="23" y="17" width="1" height="3"/><rect x="10" y="20" width="3" height="1"/><rect x="9" y="21" width="1" height="3"/><rect x="19" y="20" width="3" height="1"/><rect x="22" y="21" width="1" height="3"/></g><rect x="15" y="11" width="1" height="1" fill="#c41e1e"/><rect x="16" y="11" width="1" height="1" fill="#c41e1e"/>');
 
   (window.RETRO_APPS = window.RETRO_APPS || []).push(
-    { id: 'solitaire', label: 'Solitaire', kind: 'builtin', cat: 'game', eras: ['1990', '1995', '2000'], icon: ICON_SOL, window: { w: 620, h: 500 }, css: CSS, open: openSolitaire },
-    { id: 'freecell', label: 'FreeCell', kind: 'builtin', cat: 'game', eras: ['1995', '2000'], icon: ICON_FC, window: { w: 620, h: 500 }, open: openFreeCell },
-    { id: 'hearts', label: 'Hearts', kind: 'builtin', cat: 'game', eras: ['1995', '2000'], icon: ICON_HEARTS, window: { w: 620, h: 520 }, open: openHearts },
-    { id: 'spider', label: 'Spider Solitaire', kind: 'builtin', cat: 'game', eras: ['2000'], icon: ICON_SPIDER, window: { w: 720, h: 540 }, open: openSpider }
+    { id: 'solitaire', help: 'The classic one-player card game. Win to earn money.', label: 'Solitaire', kind: 'builtin', cat: 'game', eras: ['1990', '1995', '2000'], icon: ICON_SOL, window: { w: 620, h: 500 }, css: CSS, open: openSolitaire },
+    { id: 'freecell', help: 'A card puzzle you can almost always solve. Win to earn money.', label: 'FreeCell', kind: 'builtin', cat: 'game', eras: ['1995', '2000'], icon: ICON_FC, window: { w: 620, h: 500 }, open: openFreeCell },
+    { id: 'hearts', help: 'A card game against three computer players. Avoid the hearts!', label: 'Hearts', kind: 'builtin', cat: 'game', eras: ['1995', '2000'], icon: ICON_HEARTS, window: { w: 620, h: 520 }, open: openHearts },
+    { id: 'spider', help: 'Solitaire with two decks. Pick 1, 2 or 4 suits. Win to earn money.', label: 'Spider Solitaire', kind: 'builtin', cat: 'game', eras: ['2000'], icon: ICON_SPIDER, window: { w: 720, h: 540 }, open: openSpider }
   );
 })();

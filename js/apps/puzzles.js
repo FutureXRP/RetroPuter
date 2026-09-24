@@ -1355,7 +1355,7 @@
   }
 
   (window.RETRO_APPS = window.RETRO_APPS || []).push({
-    id: 'lemonade',
+    id: 'lemonade', help: 'Run a lemonade stand: buy supplies, set prices and watch the weather.',
     label: "Sunny's Lemonade Stand",
     cmd: 'LEMONADE',
     kind: 'builtin', cat: 'game',
