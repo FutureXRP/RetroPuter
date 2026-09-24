@@ -2190,7 +2190,7 @@ function layoutRoom() {
   fitScreen();
 }
 /* The desk's ad slot. Ads come from js/ads.js (window.RETRO_ADS); one is chosen per visit. */
-const AD = (() => { const list = (window.RETRO_ADS || []).filter(a => a && a.href && a.html); return list.length ? list[Math.random() * list.length | 0] : null; })();
+const AD = (() => { const list = (window.RETRO_ADS || []).filter(a => a && a.href && a.html && a.active !== false); return list.length ? list[Math.random() * list.length | 0] : null; })();
 function placeAd(size, x, y) {
   const el = room.querySelector('.rm-ad');
   if (!size || !AD) { el.hidden = true; return; }
