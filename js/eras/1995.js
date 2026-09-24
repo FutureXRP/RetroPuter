@@ -77,7 +77,7 @@ function page(url, h) {
       return { title: 'Shareware Shack: Free Downloads', cls: 'w95', blocks: [
         `<h1 style="font-family:Arial;color:#000066">Shareware Shack</h1><p>Over 4,000 programs! Try them free. If you like one, mail the author a check.</p>`,
         h.dlTable([['JOKES.TXT', 3, 'Six brand-new jokes'], ['CATPIC.JPG', 60, 'A photo of a cat. JPEG makes it smaller!'], ['SKYBLAST2.ZIP', 2400, 'Space shooter, now in 256 colors'], ['SONG.MP3', 3000, 'One song, in the new MP3 format'], ['CLIP.AVI', 5200, 'A 30-second video the size of a postage stamp']]),
-        `<p><small>Big downloads? Ask your parents about a second phone line.</small></p><p>${A(SITES.home, 'Back to PrairieNet')}</p>`
+        `<p><small>Big downloads? Ask your parents about a second phone line.</small></p><p><b>New on CD-ROM:</b> ${APP('store', 'Visit the CompuMart CD-ROM Superstore')}</p><p>${A(SITES.home, 'Back to PrairieNet')}</p>`
       ], after(root) { h.bindDownloads(root); }};
     case SITES.fish:
       return { title: 'The PrairieNet FishCam', cls: 'w95', blocks: [
@@ -208,7 +208,8 @@ THINGS TO TRY
 3. Look at the FishCam. Yes, really.
 4. Open Chat Room and say hi. Try typing "a/s/l".
 5. Download something and compare the time to 1990.
-6. Click the hourglass on the taskbar to jump back to 1990 or ahead to 2000.`,
+6. Click the hourglass on the taskbar to jump back to 1990 or ahead to 2000.
+7. Look in Start, then Games, for the new card games. Then visit the CompuMart CD-ROM Superstore (the Software Store icon) and buy something with the money you've earned.`,
     'JOKES.TXT':
 `JOKES.TXT  (downloaded from Shareware Shack, 1995 edition)
 ---------------------------------------------------------

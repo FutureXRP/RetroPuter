@@ -99,7 +99,7 @@ function page(url, h) {
       return { title: 'Download Depot', cls: 'w00', blocks: [
         `<div class="top" style="background:linear-gradient(#3a6ea5,#0a246a)">Download Depot <small>The biggest files on the Web. Allegedly.</small></div>`,
         `<div class="pd">${h.dlTable([['JOKES.TXT', 3, 'The best jokes of the century'], ['SONG.MP3', 3500, 'Adds a new song to your Jukebox'], ['SCRNSAVE.EXE', 800, 'A screen saver of fish'], ['TRAILER.MOV', 18000, 'A two-minute movie trailer'], ['SKYBLAST2K.EXE', 42000, 'SkyBlast 2000 demo, now in 3D']])}</div>`,
-        `<p class="pd"><small>${fast ? 'You have DSL. Must be nice.' : 'On a 56K modem, start the big ones and go to bed. Or get DSL.'}</small></p><p class="pd">${A(SITES.home, 'Back to PrairieNet')}</p>`
+        `<p class="pd"><small>${fast ? 'You have DSL. Must be nice.' : 'On a 56K modem, start the big ones and go to bed. Or get DSL.'}</small></p><p class="pd"><b>Full games:</b> ${APP('store', 'Shop the Download Depot Store')}</p><p class="pd">${A(SITES.home, 'Back to PrairieNet')}</p>`
       ], after(root) { h.bindDownloads(root); }};
     case SITES.bid:
       return { title: 'BidBarn: Buy Anything From Anyone', cls: 'w00', blocks: [
@@ -238,7 +238,8 @@ THINGS TO TRY
 3. Open Buddy Messenger and IM someone.
 4. Download SONG.MP3 from the Download Depot, then play it in Jukebox.
 5. Close the pop-up ads. There will be pop-up ads.
-6. Click the hourglass on the taskbar to go back to 1990 and feel how slow it was.`,
+6. Click the hourglass on the taskbar to go back to 1990 and feel how slow it was.
+7. Buy a game from the Software Store while you're online. On 56K it downloads slowly; on DSL it's done in seconds. Everything you bought in earlier years still works here.`,
     'JOKES.TXT':
 `JOKES.TXT  (Download Depot, Millennium Edition)
 ----------------------------------------------

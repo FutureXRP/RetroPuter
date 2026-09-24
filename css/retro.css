@@ -452,3 +452,46 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .jb li small{color:#6a6}
 
 /* screensaver extras use the same canvas */
+
+/* ---- app platform: toast, start submenu, store, files ---- */
+#toast{position:absolute;right:8px;bottom:42px;z-index:8600;background:#ffffe1;color:#000;border:1px solid #000;padding:6px 10px;font-size:12px;box-shadow:2px 2px 0 rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:280px}
+#toast.on{opacity:1;transform:none}
+#startmenu .items .arr{margin-left:auto;padding-left:14px;font-weight:400}
+#startsub{position:absolute;z-index:8600;padding:2px;display:flex;flex-direction:column;min-width:190px;max-height:calc(100% - 40px);overflow:auto}
+#startsub button{display:flex;align-items:center;gap:8px;background:none;border:0;text-align:left;padding:3px 16px 3px 6px;cursor:pointer;white-space:nowrap}
+#startsub button svg{width:20px;height:20px;flex:none}
+#startsub button:hover,#startsub button:focus-visible{background:var(--navy);color:#fff;outline:none}
+.shop{display:flex;flex-direction:column;height:100%;background:#fff}
+.shop-hd{display:flex;justify-content:space-between;gap:10px;align-items:center;background:linear-gradient(90deg,var(--navy),#1084d0);color:#fff;padding:8px 10px;flex-wrap:wrap}
+.shop-hd b{display:block;font-size:16px}
+.shop-hd small{display:block;font-size:11px;opacity:.9}
+.shop-wallet{text-align:right;background:rgba(0,0,0,.25);padding:4px 8px}
+.shop-wallet b{font:22px var(--dos);color:#ff0}
+.shop-wallet small{max-width:200px}
+.shop-list{flex:1;overflow:auto;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;align-content:start}
+.shop-item{display:flex;gap:10px;border:1px solid #bbb;padding:8px;background:#f4f4f4}
+.shop-item.hi{outline:2px solid #fc0}
+.shop-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.shop-txt small{color:#555;font-size:11px}
+.shop-txt p{margin:4px 0;font-size:12px;line-height:1.35}
+.shop-buy{margin-top:auto;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.shop-buy .price{font:20px var(--dos);color:#060}
+.shop-buy .own{color:#060;font-weight:700;font-size:12px}
+.shop-later{padding:6px 10px;font-size:11px;color:#444;background:#eee;border-top:1px solid #ccc}
+.box3d{width:86px;height:118px;flex:none;background:var(--bx);color:var(--fg);border:1px solid #000;box-shadow:4px 4px 0 rgba(0,0,0,.35),inset -6px 0 0 rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 8px 4px 4px;overflow:hidden}
+.box3d .bx-top{font-size:7px;letter-spacing:1px;text-transform:uppercase;opacity:.8}
+.box3d .bx-ico svg{width:36px;height:36px;margin:4px 0}
+.box3d .bx-title{font:700 12px/1.05 Arial,sans-serif;color:var(--ac)}
+.box3d .bx-tag{font-size:8px;line-height:1.1;margin-top:3px;opacity:.9}
+.box3d .bx-foot{margin-top:auto;font:10px var(--dos);background:var(--ac);color:#000;padding:0 4px}
+@media (max-width:520px){.shop-list{grid-template-columns:1fr}}
+.inst-top{display:flex;gap:10px;align-items:center}
+.inst-top svg{width:34px;height:34px;flex:none}
+.inst-top div{font-size:12px}
+.fmg{display:flex;flex-direction:column;height:100%;gap:4px}
+.fm-bar{display:flex;gap:6px;align-items:center}
+.fm-bar .btn{min-width:0;padding:2px 10px}
+.fm-bar span{flex:1;background:#fff;padding:2px 6px;font-family:"Courier New",monospace}
+.fm-list{flex:1;overflow:auto;background:#fff;display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));align-content:start;gap:8px 4px;padding:8px}
+.fm-empty{grid-column:1/-1;color:#666;margin:6px}
+.fm-st{font-size:11px;padding:0 2px}

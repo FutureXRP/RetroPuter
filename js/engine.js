@@ -253,6 +253,10 @@ const ICONS = {
   start: svg('<rect x="6" y="2" width="12" height="3" fill="#ff5500"/><rect x="3" y="5" width="18" height="3" fill="#ff9900"/><rect x="1" y="8" width="22" height="3" fill="#ffdd00"/><rect x="0" y="12" width="24" height="2" fill="#000080"/><rect x="3" y="15" width="18" height="2" fill="#000080"/><rect x="7" y="18" width="10" height="2" fill="#000080"/>', '0 0 24 21'),
   tw: svg('<path d="M4 2h8v3l-3 3 3 3v3H4v-3l3-3-3-3z" fill="#ffe8a0" stroke="#000"/><path d="M5 12h6v1H5zM7 8h2v1H7z" fill="#a07000"/>', '0 0 16 16'),
   net: svg('<rect x="1" y="2" width="8" height="6" fill="#008080" stroke="#000"/><rect x="7" y="7" width="8" height="6" fill="#008080" stroke="#000"/><rect x="3" y="9" width="4" height="1" fill="#000"/><rect x="9" y="14" width="4" height="1" fill="#000"/>', '0 0 16 16'),
+  shop: svg('<path d="M3 8h26l-3 14H6z" fill="#ffd84d" stroke="#000"/><path d="M9 8l4-5M23 8l-4-5" stroke="#000" stroke-width="2"/><rect x="8" y="12" width="3" height="7" fill="#c00"/><rect x="14" y="12" width="3" height="7" fill="#00a"/><rect x="20" y="12" width="3" height="7" fill="#080"/><circle cx="10" cy="26" r="2.5" fill="#000"/><circle cx="23" cy="26" r="2.5" fill="#000"/>'),
+  pc: svg('<rect x="4" y="3" width="24" height="17" fill="#c0c0c0" stroke="#000"/><rect x="7" y="6" width="18" height="11" fill="#008080"/><rect x="11" y="20" width="10" height="3" fill="#808080"/><rect x="3" y="23" width="26" height="6" fill="#c0c0c0" stroke="#000"/><rect x="20" y="25" width="6" height="2" fill="#000"/>'),
+  folder: svg('<path d="M2 8h11l3 3h14v17H2z" fill="#ffd84d" stroke="#000"/><path d="M2 13h28" stroke="#c9a200"/>'),
+  group: svg('<rect x="3" y="9" width="26" height="16" fill="#c0c0c0" stroke="#000"/><rect x="3" y="9" width="26" height="4" fill="#000080"/><g fill="#fff" stroke="#000"><rect x="7" y="16" width="5" height="5"/><rect x="14" y="16" width="5" height="5"/><rect x="21" y="16" width="5" height="5"/></g>'),
   vol: svg('<path d="M2 6h3l4-3v10l-4-3H2z" fill="#ff0" stroke="#000"/><path d="M11 5q2 3 0 6M12.5 3.5q3.5 4.5 0 9" fill="none" stroke="#000"/>', '0 0 16 16')
 };
 const TB = {
@@ -324,7 +328,8 @@ function openWin(o) {
   el.querySelector('.t').textContent = o.title;
   layer.appendChild(el);
   const W = { id: o.id, el, title: o.title, icon: o.icon, body: el.querySelector('.body'), modal: !!o.modal };
-  const L = layer.getBoundingClientRect();
+  // Not getBoundingClientRect: the power-on animation scales the screen. Fall back to the viewport if the desktop is not laid out yet.
+  const L = { width: layer.clientWidth || innerWidth, height: layer.clientHeight || innerHeight - 34 };
   const narrow = L.width < 640;
   const w = Math.min(o.w || 420, L.width - 8), h = Math.min(o.h || 300, L.height - 8);
   let left, top;
@@ -397,7 +402,7 @@ let openMenuEl = null;
 function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; $$('.mi.open').forEach(m => m.classList.remove('open')); } }
 document.addEventListener('pointerdown', e => {
   if (openMenuEl && !e.target.closest('.menu') && !e.target.closest('.mi')) closeMenu();
-  if (!e.target.closest('#startmenu') && !e.target.closest('#offbtn')) closeStart();
+  if (!e.target.closest('#startmenu') && !e.target.closest('#startsub') && !e.target.closest('#offbtn')) closeStart();
   if (!e.target.closest('#tw-panel') && !e.target.closest('.twb') && !e.target.closest('#tw-float')) closeTW();
 });
 function menubar(W, spec) {
@@ -461,21 +466,107 @@ document.addEventListener('keydown', e => {
 $('#st-desk').addEventListener('pointerdown', () => sfx.click());
 
 /* ---------- apps ---------- */
+// Core apps built into the engine. cat: 'main' | 'acc' (accessories) | 'game'
 const APP_DEFS = {
-  dial: () => ({ label: era.modem.appLabel || 'Dial-Up Connection', icon: 'dial', open: openDial }),
-  nv: () => ({ label: era.browser.name, icon: 'web', open: () => openBrowser() }),
-  readme: () => ({ label: 'Read Me First', icon: 'note', open: () => openNotepad('README.TXT') }),
-  mines: () => ({ label: 'Mines', icon: 'mines', open: openMines }),
-  worm: () => ({ label: 'Worm', icon: 'worm', open: openWorm }),
-  paint: () => ({ label: 'Paintbox', icon: 'paint', open: openPaint }),
-  np: () => ({ label: 'Notepad', icon: 'note', open: () => openNotepad('MYNOTES.TXT') }),
-  cp: () => ({ label: 'Control Panel', icon: 'cp', open: openSettings }),
-  chat: () => ({ label: era.chat.label, icon: 'chat', open: () => openChat(era.chat) }),
-  im: () => ({ label: era.im.label, icon: 'im', open: () => openChat(era.im) }),
-  jb: () => ({ label: 'Jukebox', icon: 'jb', open: () => openJukebox() })
+  dial: () => ({ label: era.modem.appLabel || 'Dial-Up Connection', icon: 'dial', cat: 'main', open: openDial }),
+  nv: () => ({ label: era.browser.name, icon: 'web', cat: 'main', open: () => openBrowser() }),
+  readme: () => ({ label: 'Read Me First', icon: 'note', cat: 'main', open: () => openNotepad('README.TXT') }),
+  mines: () => ({ label: 'Mines', icon: 'mines', cat: 'game', open: openMines }),
+  worm: () => ({ label: 'Worm', icon: 'worm', cat: 'game', open: openWorm }),
+  paint: () => ({ label: 'Paintbox', icon: 'paint', cat: 'acc', open: openPaint }),
+  np: () => ({ label: 'Notepad', icon: 'note', cat: 'acc', open: () => openNotepad('MYNOTES.TXT') }),
+  cp: () => ({ label: 'Control Panel', icon: 'cp', cat: 'main', open: openSettings }),
+  chat: () => ({ label: era.chat.label, icon: 'chat', cat: 'main', open: () => openChat(era.chat) }),
+  im: () => ({ label: era.im.label, icon: 'im', cat: 'main', open: () => openChat(era.im) }),
+  jb: () => ({ label: 'Jukebox', icon: 'jb', cat: 'main', open: () => openJukebox() }),
+  store: () => ({ label: 'Software Store', icon: 'shop', cat: 'main', open: () => openStore() }),
+  files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() })
 };
-const apps = () => era.apps.map(id => Object.assign({ id }, APP_DEFS[id]()));
-const openApp = id => { const d = APP_DEFS[id]; if (d && era.apps.includes(id)) d().open(); };
+
+/* Plug-in programs live in js/apps/*.js and register on window.RETRO_APPS.
+   kind 'builtin' ships with the listed eras; kind 'store' is bought in the
+   Software Store and runs in its release year and every later year. */
+const PLUGINS = {};
+(window.RETRO_APPS || []).forEach(p => {
+  if (!p || !p.id || PLUGINS[p.id] || APP_DEFS[p.id]) { console.warn('Skipping app', p && p.id); return; }
+  PLUGINS[p.id] = p;
+  if (p.icon) ICONS['app-' + p.id] = p.icon;
+  if (p.css) { const st = document.createElement('style'); st.dataset.app = p.id; st.textContent = p.css; document.head.appendChild(st); }
+});
+const owned = () => store.get('owned', []);
+const isOwned = id => owned().includes(id);
+const pluginRuns = p => p.kind === 'store' ? (p.year || 1990) <= era.year && isOwned(p.id) : (p.eras || []).includes(era.id);
+const pluginDef = p => ({ id: p.id, label: p.label, icon: 'app-' + p.id, cat: p.cat || (p.kind === 'store' ? 'game' : 'game'), bought: p.kind === 'store', open: () => launchApp(p.id) });
+// Everything that runs in this year, in display order.
+function apps() {
+  const core = [...era.apps, 'store', 'files'].map(id => Object.assign({ id }, APP_DEFS[id]()));
+  return core.concat(Object.values(PLUGINS).filter(pluginRuns).map(pluginDef));
+}
+const findApp = id => apps().find(a => a.id === id);
+const openApp = id => { const a = findApp(id); if (a) a.open(); else if (PLUGINS[id]) launchApp(id); };
+
+function appApi(p, W) {
+  return {
+    era: { id: era.id, year: era.year },
+    sfx, tone, noise, midi, esc, sleep, pick, $, $$,
+    get user() { return store.get('user', 'kidsurfer'); },
+    load: (k, d) => store.get('app:' + p.id + ':' + k, d),
+    save: (k, v) => store.set('app:' + p.id + ':' + k, v),
+    msgBox, menubar: spec => menubar(W, spec),
+    setTitle: t => setTitle(W, t), close: () => closeWin(W),
+    playMusic: song => playMusic(song, p.id), stopMusic: () => stopMusic(p.id),
+    earn: (amt, why) => earn(amt, why),
+    online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
+    openApp
+  };
+}
+function launchApp(id) {
+  const p = PLUGINS[id]; if (!p) return;
+  if (!pluginRuns(p)) {
+    if (p.kind === 'store' && !isOwned(id)) { openStore(id); return; }
+    msgBox(p.label, `${p.label} needs ${p.year >= 2000 ? 'Horizon 2000' : p.year >= 1995 ? 'Horizon 95' : 'Horizon'} or newer. Use the Time Machine to go forward in time.`, ['OK'], 'warn');
+    return;
+  }
+  const w = p.window || {};
+  openWin({ id: 'app:' + id, title: p.label, icon: 'app-' + id, w: w.w || 520, h: w.h || 420, fixed: !!w.fixed, autoH: !!w.autoH, build(W) {
+    try { p.open(W, appApi(p, W)); }
+    catch (e) {
+      console.error(e);
+      W.body.innerHTML = `<div class="dlg"><div class="row">${ICONS.stop}<div class="msg">${esc(p.label)} has performed an illegal operation and will be shut down.\n\n${esc(e.message)}</div></div></div>`;
+    }
+    const own = W.onClose;
+    W.onClose = () => { const r = own && own(); if (r === false && !tearing) return false; stopMusic(p.id); };
+  }});
+}
+
+/* play money */
+const WALLET_START = 60, ALLOWANCE = 10, DAILY_EARN_CAP = 60;
+const wallet = () => store.get('wallet', WALLET_START);
+const setWallet = v => store.set('wallet', Math.round(v * 100) / 100);
+const money = v => '$' + Number(v).toFixed(2);
+function earn(amt, why) {
+  const day = new Date().toDateString(), log = store.get('earnLog', { day, n: 0 });
+  if (log.day !== day) { log.day = day; log.n = 0; }
+  const give = Math.max(0, Math.min(amt, DAILY_EARN_CAP - log.n));
+  if (!give) return 0;
+  log.n += give; store.set('earnLog', log); setWallet(wallet() + give);
+  toast(`+${money(give)}${why ? ' for ' + why : ''}`);
+  if (wins.store && wins.store.refresh) wins.store.refresh();
+  return give;
+}
+function allowance() {
+  const day = new Date().toDateString();
+  if (store.get('allowanceDay', '') === day) return;
+  const first = store.get('allowanceDay', '') === '';
+  store.set('allowanceDay', day);
+  if (!first) { setWallet(wallet() + ALLOWANCE); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance. Spend it at the Software Store!`), 1500); }
+}
+let toastT = 0;
+function toast(text) {
+  const t = $('#toast'); if (!t) return;
+  t.textContent = text; t.classList.add('on'); sfx.blip(990);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3200);
+}
 
 function iconButton(a, grid) {
   const b = document.createElement('button'); b.className = 'icon'; b.setAttribute('role', 'listitem');
@@ -487,22 +578,43 @@ function iconButton(a, grid) {
   b.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); a.open(); } });
   return b;
 }
+const GROUPS = { acc: 'Accessories', game: 'Games' };
+const groupApps = cat => apps().filter(a => a.cat === cat);
+// A folder or program-group window: a grid of icons that refreshes after a purchase.
+function openFolder(cat) {
+  const W = openWin({ id: 'fld:' + cat, title: GROUPS[cat], icon: cat === 'game' ? 'mines' : 'pm', w: 430, h: 300, build(W) {
+    W.refresh = () => {
+      W.body.innerHTML = '<div class="pm" role="list"></div>';
+      const grid = W.body.firstChild;
+      groupApps(cat).forEach(a => grid.appendChild(iconButton(a, grid)));
+      if (cat === 'game') grid.appendChild(iconButton({ label: 'Get more games…', icon: 'shop', open: () => openStore() }, grid));
+    };
+    W.refresh();
+  }});
+  return W;
+}
+function refreshShell() {
+  Object.values(wins).forEach(W => W.id.startsWith('fld:') && W.refresh && W.refresh());
+  if (era.shell === 'start' && stageOn('st-desk')) buildStartMenu();
+}
 
 function openProgman() {
-  openWin({ id: 'pm', title: 'Program Manager', icon: 'pm', w: 470, h: 290, build(W) {
-    const list = apps();
+  openWin({ id: 'pm', title: 'Program Manager', icon: 'pm', w: 490, h: 300, build(W) {
+    const main = () => apps().filter(a => a.cat === 'main');
     menubar(W, [
-      { label: 'File', items: [
-        ...list.slice(0, 3).map(a => ({ label: 'Open ' + a.label, fn: a.open })), '-',
+      { label: 'File', items: () => [
+        ...main().slice(0, 3).map(a => ({ label: 'Open ' + a.label, fn: a.open })), '-',
         { label: 'Travel to another year…', fn: () => openTW() },
         { label: 'Shut Down…', fn: askShutdown }
       ]},
       { label: 'Options', items: () => [{ label: 'Control Panel', fn: openSettings }, { label: settings.crt ? 'Turn off CRT glow' : 'Turn on CRT glow', fn: toggleCrt }] },
+      { label: 'Window', items: () => Object.keys(GROUPS).map(c => ({ label: GROUPS[c], fn: () => openFolder(c) })) },
       { label: 'Help', items: [{ label: 'Read Me First', fn: () => openNotepad('README.TXT') }, { label: 'About ' + era.os.name, fn: aboutOS }] }
     ]);
     W.body.innerHTML = '<div class="pm" role="list"></div>';
     const grid = W.body.firstChild;
-    list.forEach(a => grid.appendChild(iconButton(a, grid)));
+    main().forEach(a => grid.appendChild(iconButton(a, grid)));
+    Object.keys(GROUPS).forEach(c => grid.appendChild(iconButton({ label: GROUPS[c], icon: 'group', open: () => openFolder(c) }, grid)));
     W.onClose = () => { if (tearing) return; askShutdown(); return false; };
   }});
 }
@@ -512,17 +624,30 @@ function toggleCrt() { settings.crt = !settings.crt; screen.classList.toggle('cr
 /* Start-menu desktop (1995 and later) */
 function buildStartShell() {
   const grid = document.createElement('div'); grid.id = 'deskicons'; grid.setAttribute('role', 'list');
-  apps().forEach(a => grid.appendChild(iconButton(a, grid)));
+  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store'];
+  desk.forEach(id => grid.appendChild(iconButton(findApp(id), grid)));
+  grid.appendChild(iconButton({ label: 'Games', icon: 'folder', open: () => openFolder('game') }, grid));
   layer.prepend(grid);
   grid.addEventListener('pointerdown', e => { if (e.target === grid) $$('.icon.sel', grid).forEach(x => x.classList.remove('sel')); });
-  const sm = $('#startmenu');
-  sm.querySelector('.side').innerHTML = era.os.startSide;
-  const items = sm.querySelector('.items'); items.innerHTML = '';
-  const add = (icon, label, fn) => {
-    const b = document.createElement('button'); b.innerHTML = (ICONS[icon] || '') + '<span></span>'; b.querySelector('span').textContent = label;
-    b.onclick = () => { closeStart(); fn(); }; items.appendChild(b);
+  $('#startmenu .side').innerHTML = era.os.startSide;
+  buildStartMenu();
+  const ql = $('#ql'); ql.innerHTML = '';
+  (era.quickLaunch || []).forEach(id => {
+    const d = APP_DEFS[id](); const b = document.createElement('button');
+    b.innerHTML = ICONS[d.icon]; b.title = d.label; b.setAttribute('aria-label', d.label); b.onclick = d.open; ql.appendChild(b);
+  });
+}
+function buildStartMenu() {
+  const items = $('#startmenu .items'); items.innerHTML = '';
+  const add = (icon, label, fn, sub) => {
+    const b = document.createElement('button'); b.innerHTML = (ICONS[icon] || '') + '<span></span>' + (sub ? '<b class="arr">▸</b>' : '');
+    b.querySelector('span').textContent = label;
+    if (sub) { b.onclick = e => { e.stopPropagation(); openSub(b, sub()); }; b.onpointerenter = e => { if (e.pointerType === 'mouse') openSub(b, sub()); }; }
+    else { b.onclick = () => { closeStart(); fn(); }; b.onpointerenter = () => closeSub(); }
+    items.appendChild(b);
   };
-  apps().filter(a => a.id !== 'cp' && a.id !== 'readme').forEach(a => add(a.icon, a.label, a.open));
+  add('folder', 'Programs', null, () => apps().filter(a => a.cat !== 'game' && !['cp', 'readme'].includes(a.id)));
+  add('mines', 'Games', null, () => groupApps('game').concat([{ label: 'Get more games…', icon: 'shop', open: () => openStore() }]));
   items.appendChild(document.createElement('hr'));
   add('cp', 'Control Panel', openSettings);
   add('note', 'Help: Read Me First', () => openNotepad('README.TXT'));
@@ -530,18 +655,30 @@ function buildStartShell() {
   add('tw', 'Travel to another year…', () => openTW());
   items.appendChild(document.createElement('hr'));
   add('power', 'Shut Down…', askShutdown);
-  const ql = $('#ql'); ql.innerHTML = '';
-  (era.quickLaunch || []).forEach(id => {
-    const d = APP_DEFS[id](); const b = document.createElement('button');
-    b.innerHTML = ICONS[d.icon]; b.title = d.label; b.setAttribute('aria-label', d.label); b.onclick = d.open; ql.appendChild(b);
-  });
 }
+function openSub(btn, list) {
+  closeSub();
+  const m = document.createElement('div'); m.id = 'startsub'; m.className = 'raised'; m.setAttribute('role', 'menu');
+  list.forEach(a => {
+    const b = document.createElement('button'); b.innerHTML = (ICONS[a.icon] || '') + '<span></span>'; b.querySelector('span').textContent = a.label;
+    b.onclick = () => { closeStart(); a.open(); }; m.appendChild(b);
+  });
+  $('#st-desk').appendChild(m);
+  const S = $('#st-desk').getBoundingClientRect(), r = btn.getBoundingClientRect(), sm = $('#startmenu').getBoundingClientRect();
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  let left = sm.right - S.left - 3, top = r.top - S.top;
+  if (left + mw > S.width) left = Math.max(0, S.width - mw);
+  if (top + mh > S.height - 34) top = Math.max(0, S.height - 34 - mh);
+  m.style.left = left + 'px'; m.style.top = top + 'px';
+  const f = m.querySelector('button'); f && f.focus();
+}
+function closeSub() { const m = $('#startsub'); if (m) m.remove(); }
 function toggleStart() {
   const sm = $('#startmenu'), on = !sm.classList.contains('on');
   sm.classList.toggle('on', on); $('#offbtn').classList.toggle('down', on);
   if (on) { sfx.click(); const f = sm.querySelector('button'); f && f.focus(); }
 }
-function closeStart() { $('#startmenu').classList.remove('on'); $('#offbtn').classList.remove('down'); }
+function closeStart() { closeSub(); $('#startmenu').classList.remove('on'); $('#offbtn').classList.remove('down'); }
 function setupTaskbar() {
   const off = $('#offbtn');
   if (era.shell === 'start') {
@@ -856,7 +993,7 @@ function maybePopup() {
   if (Object.keys(wins).filter(k => k.startsWith('pop')).length >= 2) return;
   setTimeout(() => {
     if (!wins.nv || !net.connected) return;
-    const ad = pick(era.popups), L = layer.getBoundingClientRect();
+    const ad = pick(era.popups), L = { width: layer.clientWidth, height: layer.clientHeight };
     sfx.ding();
     openWin({ id: 'pop' + (++popN), title: ad.title, icon: 'warn', w: 300, h: 210, fixed: true, noMin: true,
       at: [Math.random() * Math.max(10, L.width - 320), Math.random() * Math.max(10, L.height - 240)], build(W) {
@@ -889,7 +1026,7 @@ function openDownload(name, kb) {
       info.textContent = `${got.toFixed(0)} KB of ${kb} KB copied. Time left: ${fmtTime((kb - got) / rateKB())} at ${rateKB().toFixed(1)} KB/sec`;
       if (got >= kb) {
         clearInterval(t); if (!alive) return; sfx.tada(); closeWin(W);
-        downloaded(name);
+        downloaded(name, kb);
       }
     }, 250);
     W.body.querySelector('[data-turbo]').onclick = e => { turbo = 60; e.target.disabled = true; };
@@ -897,7 +1034,9 @@ function openDownload(name, kb) {
     W.onClose = () => { alive = false; clearInterval(t); };
   }});
 }
-async function downloaded(name) {
+async function downloaded(name, kb) {
+  estore.set('downloads', [...estore.get('downloads', []).filter(d => d.n !== name), { n: name, kb }]);
+  if (wins.files && wins.files.refresh) wins.files.refresh();
   if (era.files[name]) { estore.set('got:' + name, true); if (name === 'JOKES.TXT' && era.id === '1990') store.set('gotJokes', true); openNotepad(name); return; }
   const song = (era.songs || []).find(s => s.locked === name);
   if (song && era.apps.includes('jb')) {
@@ -909,6 +1048,167 @@ async function downloaded(name) {
   msgBox('Download Complete', `${name} is saved to C:\\DOWNLOAD.\n\n${era.dlDone}`);
 }
 
+/* --- software store --- */
+const STORE_INFO = {
+  '1990': { name: 'Cardinal Software Catalog', sub: 'Mail-order software, shipped to your door on 3½" floppy disks.' },
+  '1995': { name: 'CompuMart CD-ROM Superstore', sub: 'Hundreds of titles on CD-ROM. Multimedia! Sound! Up to 650 MB!' },
+  '2000': { name: 'Download Depot Store', sub: 'Download it now, or get the CD if your modem is slow.' }
+};
+const storeInfo = () => STORE_INFO[era.id] || STORE_INFO['2000'];
+const reqOS = y => y >= 2000 ? 'Horizon 2000' : y >= 1995 ? 'Horizon 95' : 'Horizon 3.0';
+function boxArt(p) {
+  const b = p.box || {};
+  return `<div class="box3d" style="--bx:${b.bg || '#223'};--fg:${b.fg || '#fff'};--ac:${b.accent || '#fc0'}"><div class="bx-top">${esc(p.publisher || 'Horizon Games')}</div><div class="bx-ico">${p.icon || ''}</div><div class="bx-title">${esc(p.label)}</div><div class="bx-tag">${esc(p.tagline || '')}</div><div class="bx-foot">${p.year}</div></div>`;
+}
+function openStore(focusId) {
+  const W = openWin({ id: 'store', title: 'Software Store', icon: 'shop', w: 680, h: 500, build(W) {
+    W.refresh = () => {
+      const all = Object.values(PLUGINS).filter(p => p.kind === 'store').sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
+      const now = all.filter(p => p.year <= era.year), later = all.filter(p => p.year > era.year);
+      const S = storeInfo();
+      W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small></div></div>
+        <div class="shop-list">${now.map(p => {
+          const own = isOwned(p.id), paid = store.get('pending', []).includes(p.id);
+          const act = own ? `<span class="own">✔ Installed</span><button class="btn" data-play>Play</button>` : paid ? `<span class="own">Paid</span><button class="btn" data-inst>Install</button>` : `<span class="price">${money(p.price)}</span><button class="btn" data-buy>Buy</button>`;
+          return `<div class="shop-item${p.id === focusId ? ' hi' : ''}" data-id="${p.id}">${boxArt(p)}<div class="shop-txt"><b>${esc(p.label)}</b><small>${esc(p.publisher || '')} · ${p.year} · ${esc(p.genre || 'Game')}</small><p>${esc(p.blurb || '')}</p><div class="shop-buy">${act}</div></div></div>`;
+        }).join('') || '<p>No titles yet. Check back soon!</p>'}</div>
+        ${later.length ? `<div class="shop-later"><b>Coming in the future:</b> ${later.map(p => `${esc(p.label)} <small>(needs ${reqOS(p.year)})</small>`).join(', ')}</div>` : ''}</div>`;
+      $$('[data-buy]', W.body).forEach(b => b.onclick = () => buy(b.closest('[data-id]').dataset.id));
+      $$('[data-play]', W.body).forEach(b => b.onclick = () => launchApp(b.closest('[data-id]').dataset.id));
+      $$('[data-inst]', W.body).forEach(b => b.onclick = () => install(PLUGINS[b.closest('[data-id]').dataset.id]));
+      const hi = W.body.querySelector('.shop-item.hi'); if (hi) hi.scrollIntoView({ block: 'nearest' });
+    };
+    W.refresh();
+  }});
+  if (focusId && W.refresh) W.refresh();
+  return W;
+}
+async function buy(id) {
+  const p = PLUGINS[id]; if (!p || isOwned(id)) return;
+  if (wallet() < p.price) {
+    msgBox('Not enough money', `${p.label} costs ${money(p.price)}, and you have ${money(wallet())}.\n\nWin some of the free games (Mines, Worm, the card games) to earn more, or come back tomorrow for your allowance.`, ['OK'], 'warn');
+    return;
+  }
+  const r = await msgBox('Confirm purchase', `Buy ${p.label} for ${money(p.price)}?\n\nYou'll have ${money(wallet() - p.price)} left.`, ['Buy it', 'Cancel'], 'info');
+  if (r !== 'Buy it') return;
+  setWallet(wallet() - p.price);
+  store.set('pending', [...new Set([...store.get('pending', []), p.id])]);
+  if (wins.store && wins.store.refresh) wins.store.refresh();
+  install(p);
+}
+function install(p) {
+  const media = era.id === '1990' ? 'floppy' : era.id === '1995' || !net.connected ? 'cd' : 'download';
+  const kb = p.sizeKB || 1400;
+  openWin({ id: 'inst:' + p.id, title: 'Setup - ' + p.label, icon: 'dl', w: 400, fixed: true, noMin: true, autoH: true, build(W) {
+    W.body.innerHTML = `<div class="dl"><div class="inst-top">${media === 'download' ? ICONS.web : ICONS.dl}<div><b>${esc(p.label)} Setup</b><br><small data-what></small></div></div><div class="pb sunken"><div class="fill"></div></div><div data-info role="status"></div><div class="btns"><button class="btn" data-turbo hidden>Skip ahead (no fair)</button></div></div>`;
+    const what = W.body.querySelector('[data-what]'), info = W.body.querySelector('[data-info]'), fillEl = W.body.querySelector('.fill'), turboB = W.body.querySelector('[data-turbo]');
+    let alive = true, turbo = 1;
+    W.onClose = () => { if (!tearing && alive) return false; alive = false; };
+    turboB.onclick = () => { turbo = 20; turboB.disabled = true; };
+    const run = async (secs, label, from, to) => {
+      const t0 = performance.now();
+      while (alive) {
+        const f = Math.min(1, (performance.now() - t0) * turbo / (secs * 1000));
+        fillEl.style.width = (from + (to - from) * f) + '%'; info.textContent = label(f);
+        if (f >= 1) break;
+        if (media === 'download' && !net.connected) return false;
+        await sleep(100);
+      }
+      return alive;
+    };
+    (async () => {
+      let ok = true;
+      if (media === 'floppy') {
+        const n = Math.max(1, Math.min(4, Math.ceil(kb / 1440)));
+        what.textContent = `${n} floppy disk${n > 1 ? 's' : ''}, 3½" high density`;
+        for (let i = 1; i <= n && ok; i++) {
+          if (i > 1) { const r = await msgBox('Setup', `Please insert Disk ${i} of ${n} into drive A: and press OK.`, ['OK']); if (r === null || !alive) { ok = false; break; } }
+          sfx.floppy();
+          ok = await run(2.6, () => `Copying files from Disk ${i} of ${n}…`, (i - 1) / n * 100, i / n * 100);
+        }
+      } else if (media === 'cd') {
+        what.textContent = 'CD-ROM · ' + fmtKB(kb); sfx.cdrom();
+        ok = await run(4.5, f => { if (Math.random() < 0.15) sfx.seek(2); return `Installing from CD-ROM… ${Math.round(f * 100)}%`; }, 0, 100);
+      } else {
+        const secs = Math.min(kb / rateKB(), 30);
+        what.textContent = `Download · ${fmtKB(kb)} at ${fmtBps(effBps())}`; turboB.hidden = secs < 6;
+        ok = await run(secs, f => `Downloading… ${Math.round(kb * f)} KB of ${kb} KB`, 0, 100);
+        if (!ok && alive) { alive = false; closeWin(W); msgBox('Setup', 'The download failed because the connection was lost. Your purchase is saved. Open the Software Store and press Install to try again.', ['OK'], 'warn'); store.set('pending', [...new Set([...store.get('pending', []), p.id])]); return; }
+      }
+      if (!ok || !alive) { if (alive) { alive = false; closeWin(W); } store.set('pending', [...new Set([...store.get('pending', []), p.id])]); return; }
+      store.set('owned', [...new Set([...owned(), p.id])]);
+      store.set('pending', store.get('pending', []).filter(x => x !== p.id));
+      alive = false; closeWin(W); sfx.tada(); refreshShell();
+      if (wins.store && wins.store.refresh) wins.store.refresh();
+      const r = await msgBox('Setup complete', `${p.label} is installed. You'll find it in Games.`, ['Play now', 'OK']);
+      if (r === 'Play now') launchApp(p.id);
+    })();
+  }});
+}
+
+/* --- My Computer / File Manager --- */
+const DISK = { '1990': 80, '1995': 850, '2000': 20480 };
+function openFiles() {
+  let path = 'C:\\';
+  const title = era.shell === 'start' ? 'My Computer' : 'File Manager';
+  openWin({ id: 'files', title, icon: 'pc', w: 480, h: 340, build(W) {
+    const entries = () => {
+      if (path === 'C:\\') {
+        const docs = ['README.TXT', 'MYNOTES.TXT', ...Object.keys(era.files).filter(f => f !== 'README.TXT' && estore.get('got:' + f, false))];
+        return [{ n: 'DOWNLOAD', dir: true }, { n: 'GAMES', dir: true }, ...docs.map(n => ({ n, kb: n === 'MYNOTES.TXT' ? Math.ceil(store.get('mynotes', '').length / 1024) || 1 : Math.ceil((era.files[n] || '').length / 1024), open: () => openNotepad(n), ico: 'note' }))];
+      }
+      if (path === 'C:\\GAMES') return groupApps('game').map(a => ({ n: a.label, ico: a.icon, open: a.open, kb: (PLUGINS[a.id] && PLUGINS[a.id].sizeKB) || 64 }));
+      return estore.get('downloads', []).map(d => ({ n: d.n, kb: d.kb, ico: 'dl', open: () => era.files[d.n] ? openNotepad(d.n) : (era.songs || []).some(s => s.locked === d.n) && era.apps.includes('jb') ? openJukebox() : msgBox(title, `${d.n}\n\nThis file is just pretend, but it took real (pretend) time to download.`) }));
+    };
+    const render = () => {
+      const list = entries(), used = list.reduce((s, e) => s + (e.kb || 0), 0) / 1024;
+      W.body.innerHTML = `<div class="fmg"><div class="fm-bar"><button class="btn" data-up ${path === 'C:\\' ? 'disabled' : ''}>Up</button><span class="sunken">${esc(path)}</span></div><div class="fm-list sunken" role="list"></div><div class="fm-st">${list.length} object(s) · Drive C: ${DISK[era.id] >= 1024 ? DISK[era.id] / 1024 + ' GB' : DISK[era.id] + ' MB'}, ${((DISK[era.id] * (era.id === '1990' ? 0.3 : 0.4)) - used).toFixed(1)} MB free</div></div>`;
+      const box = W.body.querySelector('.fm-list');
+      if (!list.length) box.innerHTML = `<p class="fm-empty">${path.endsWith('DOWNLOAD') ? 'Nothing downloaded yet. Try the Web!' : 'Empty.'}</p>`;
+      list.forEach(e => box.appendChild(iconButton({ label: e.n, icon: e.dir ? 'folder' : (e.ico || 'note'), open: e.dir ? () => { path = 'C:\\' + e.n; render(); } : e.open }, box)));
+      W.body.querySelector('[data-up]').onclick = () => { path = 'C:\\'; render(); };
+    };
+    W.refresh = render; render();
+  }});
+}
+
+/* --- backup code (move your computer to another browser, no login) --- */
+function allSaved() {
+  const out = {};
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('r1990:')) out[k] = localStorage.getItem(k); } } catch (e) {}
+  return out;
+}
+function openBackup() {
+  openWin({ id: 'backup', title: 'Backup & Restore', icon: 'cp', w: 440, fixed: true, autoH: true, build(W) {
+    let code = '';
+    try { code = btoa(unescape(encodeURIComponent(JSON.stringify(allSaved())))); } catch (e) {}
+    W.body.innerHTML = `<div class="cp"><p style="margin:0">Your games, money, notes and scores are saved in this browser automatically. To move them to another computer or browser, copy this backup code and paste it there.</p>
+      <textarea rows="5" readonly data-code style="width:100%;font:11px monospace;word-break:break-all"></textarea>
+      <div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-copy>Copy code</button></div>
+      <fieldset><legend>Restore from a code</legend><textarea rows="3" data-in style="width:100%;font:11px monospace" placeholder="Paste a backup code here"></textarea><button class="btn" data-restore>Restore</button></fieldset>
+      <div style="text-align:right"><button class="btn" data-ok>Close</button></div></div>`;
+    const ta = W.body.querySelector('[data-code]'); ta.value = code;
+    W.body.querySelector('[data-copy]').onclick = async e => { ta.select(); try { await navigator.clipboard.writeText(code); e.target.textContent = 'Copied!'; } catch (err) { document.execCommand && document.execCommand('copy'); e.target.textContent = 'Selected, press Ctrl+C'; } };
+    W.body.querySelector('[data-restore]').onclick = async () => {
+      let data;
+      try { data = JSON.parse(decodeURIComponent(escape(atob(W.body.querySelector('[data-in]').value.trim())))); } catch (e) { msgBox('Restore', "That doesn't look like a backup code. Copy the whole thing and try again.", ['OK'], 'warn'); return; }
+      const keys = Object.keys(data || {}).filter(k => k.startsWith('r1990:'));
+      if (!keys.length) { msgBox('Restore', 'That backup code is empty.', ['OK'], 'warn'); return; }
+      const r = await msgBox('Restore', 'This replaces everything saved on this computer with the backup. Continue?', ['Restore', 'Cancel'], 'warn');
+      if (r !== 'Restore') return;
+      try { Object.keys(allSaved()).forEach(k => localStorage.removeItem(k)); keys.forEach(k => localStorage.setItem(k, data[k])); } catch (e) {}
+      location.reload();
+    };
+    W.body.querySelector('[data-ok]').onclick = () => closeWin(W);
+  }});
+}
+async function eraseAll() {
+  const r = await msgBox('Erase hard drive', 'This deletes everything: purchased games, money, notes, high scores and guestbook entries. It can\'t be undone (unless you saved a backup code).\n\nErase everything?', ['Erase', 'Cancel'], 'stop');
+  if (r !== 'Erase') return;
+  try { Object.keys(allSaved()).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  location.reload();
+}
+
 /* --- settings --- */
 function openSettings() {
   openWin({ id: 'cp', title: 'Control Panel', icon: 'cp', w: 360, fixed: true, autoH: true, build(W) {
@@ -917,6 +1217,7 @@ function openSettings() {
       <fieldset><legend>Monitor</legend><label><input type="checkbox" data-crt> Old monitor glow and scan lines</label><label><input type="checkbox" data-saver> ${esc(era.saverName)} screen saver after 1 minute</label></fieldset>
       <fieldset><legend>Desktop color</legend><div class="sws"></div></fieldset>
       <fieldset><legend>Time machine</legend><button class="btn" data-tw>Travel to another year…</button></fieldset>
+      <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button></div></fieldset>
       <div style="text-align:right"><button class="btn" data-ok>OK</button></div></div>`;
     const b = W.body;
     const vol = b.querySelector('[data-vol]'); vol.value = settings.vol;
@@ -934,6 +1235,8 @@ function openSettings() {
       sws.appendChild(x);
     });
     b.querySelector('[data-tw]').onclick = e => openTW(e.currentTarget);
+    b.querySelector('[data-bk]').onclick = openBackup;
+    b.querySelector('[data-erase]').onclick = eraseAll;
     b.querySelector('[data-ok]').onclick = () => closeWin(W);
   }});
 }
@@ -999,6 +1302,7 @@ function openMines() {
       sfx.tada();
       const best = store.get('minesBest', null);
       if (!best || secs < best) store.set('minesBest', secs);
+      earn(5, 'winning Mines');
       setTimeout(() => msgBox('Mines', `You cleared the field in ${secs} seconds!` + (best && secs >= best ? `\nYour best is ${best} seconds.` : '\nThat\'s a new best time.')), 400);
     }
     let press = null, suppress = false;
@@ -1068,6 +1372,7 @@ function openWorm() {
     function die() {
       alive = false; clearInterval(loop); sfx.crash();
       if (score > best()) { store.set('wormBest', score); bestEl.textContent = 'Best: ' + score; }
+      if (score >= 100) earn(Math.min(10, Math.floor(score / 100)), 'your Worm score');
       draw('Game over! Score ' + score);
       startB.textContent = 'Play again';
     }
@@ -1487,6 +1792,9 @@ function toDesktop() {
   $$('#deskicons').forEach(x => x.remove());
   setupTaskbar();
   if (era.shell === 'start') buildStartShell(); else openProgman();
+  allowance();
+  const pend = store.get('pending', []).filter(id => PLUGINS[id] && !isOwned(id));
+  if (pend.length) setTimeout(() => { if (booted) install(PLUGINS[pend[0]]); }, 1200);
   if (!estore.get('seenReadme', false)) { estore.set('seenReadme', true); setTimeout(() => { if (booted) openNotepad('README.TXT'); }, 500); }
 }
 function powerAnim(cls) { screen.classList.remove('poweron', 'poweroff'); void screen.offsetWidth; screen.classList.add(cls); }
@@ -1521,6 +1829,14 @@ $('#relight').onclick = async () => {
   booted = false; renderPower(); show('st-power');
 };
 window.addEventListener('resize', () => { Object.values(wins).forEach(W => { if (W.max) W.onResize && W.onResize(); }); });
+
+/* ---------- dev hook: add ?dev to the URL to script the computer in tests ---------- */
+if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
+  launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
+  own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,
+  desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(); } },
+  era: () => era.id, switchEra, connect: () => { net.connected = true; refreshTray(); Object.values(wins).forEach(W => W.onNet && W.onNet()); }
+};
 
 /* ---------- start ---------- */
 const fromHash = location.hash.replace('#', '');
