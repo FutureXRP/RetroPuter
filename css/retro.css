@@ -762,3 +762,14 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .y2k-txt b{font:700 clamp(40px,10vw,96px)/1 Arial Black,Arial,sans-serif;color:#ffd700;text-shadow:0 0 18px #f0f,3px 3px 0 #800080}
 .y2k-txt span{font-size:18px;color:#cff}
 .y2k-skip{position:absolute;right:12px;bottom:12px}
+
+/* ---- Software Store: free programs and tester shortcuts ---- */
+.shop-free{margin:10px 8px 4px;padding-top:6px;border-top:2px groove #fff}
+.shop-free h4{margin:4px 0}
+.shop-free p{margin:2px 0 6px;font-size:12px}
+.shop-row{display:flex;align-items:center;gap:8px;padding:4px 2px;border-bottom:1px dotted #999}
+.shop-row .ico svg{width:24px;height:24px;display:block}
+.shop-row > span:nth-child(2){flex:1;min-width:0}
+.shop-row b{display:block}.shop-row small{display:block;color:#444}
+.shop-go{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.shop-tester h4{color:#800000}
