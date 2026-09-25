@@ -959,6 +959,7 @@
         name = n; dirty = false; setTitle(); saveDraft(); api.sfx.floppy ? api.sfx.floppy() : api.sfx.ding();
         status(`Saved "${n}" (${movie.frames.length} frames).`);
         if (movie.frames.length >= 5) api.stamp('movie-make');
+        api.task('movie-save', { frames: movie.frames.length });
       }
       function openDlg(examplesFirst) {
         stop();

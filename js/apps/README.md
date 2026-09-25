@@ -68,3 +68,29 @@ RetroPuter.desk();          // skip the boot, go to the desktop
 RetroPuter.own('trail');    // pretend it was bought
 RetroPuter.launch('trail'); // open it
 ```
+# Work Center contract (Round 4)
+
+The engine is adding a Work Center: 3 daily jobs per year, each checked automatically when the player does the work.
+Apps report finished work with `api.task(type, data)` (safe to call any time; unknown types are ignored).
+`api.jobs()` returns today's jobs for this year: `[{ id, title, pay, app, event, done, instructions, from: { name, addr }, mail: { subject, body } | null }]`.
+
+## Event types (exact names and data fields)
+| type | when | data |
+|---|---|---|
+| `note-save` | Notepad saves | `{ text }` |
+| `paint-save` | Paintbox saves/exports | `{ colors, filled }` (distinct colours used; fraction 0-1 of non-background pixels) |
+| `write-save` | Write/Horizon Writer saves | `{ text, words }` |
+| `calendar-add` | an event/appointment is added | `{ month, day, text }` (month 1-12) |
+| `cardfile-add` | a card is added/saved | `{ title, text }` |
+| `music-save` | Music Maker saves a song | `{ notes }` (count of notes placed) |
+| `page-publish` | Home Page Builder publishes | `{ title, blocks, text }` (text = all visible text joined) |
+| `basic-run` | a BASIC program finishes/stops after running | `{ lines, source }` |
+| `banner-print` | Banner Maker finishes a print | `{ text, kind }` (`kind`: 'banner' / 'sign' / 'card') |
+| `movie-save` | Movie Maker saves | `{ frames }` |
+| `typing-done` | a typing lesson/test/race finishes | `{ wpm, accuracy, app }` (accuracy 0-100) |
+| `calc-result` | Calculator shows a result after = | `{ value, expr }` |
+| `art-save` | Splatter Pad saves | `{ colors, filled }` |
+| `mail-send` | Mail sends a message | `{ to, subject, body, replyTo }` (replyTo = the job id if replying to a job email, else null) |
+| `photo-take` | Photo Studio snaps a photo | `{ scene, subjects, quality }` (subjects: array of lowercase ids in frame, e.g. ['giraffe','zookeeper']; quality 0-1: focus/framing) |
+| `photo-save` | a photo is saved to the album | `{ scene, subjects, quality }` |
+| `sheet-save` | Spreadsheet saves | `{ cells, values }` (cells: {A1:'=SUM(A1:A3)'} raw text; values: {A1: 12} computed) |

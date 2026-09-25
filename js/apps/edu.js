@@ -864,6 +864,7 @@
         const wpm = wpmNow(), acc = accNow();
         const trouble = [...new Set([...s.errAt].map(i => s.text[i] === ' ' ? 'space' : s.text[i]))].slice(0, 8);
         if (s.race) return raceEnd(s.pos >= s.text.length, wpm, acc);
+        api.task('typing-done', { wpm, accuracy: acc, app: 'typerider' });
         const i = s.lesson, p = prog.l[i] || (prog.l[i] = { tries: 0 });
         const pass = acc >= 90, firstPass = pass && !p.passed;
         p.tries = (p.tries || 0) + 1; p.best = Math.max(p.best || 0, wpm); p.acc = Math.max(p.acc || 0, acc);
@@ -966,6 +967,7 @@
       }
       function raceEnd(won, wpm, acc) {
         const D = ses.race;
+        api.task('typing-done', { wpm, accuracy: acc, app: 'typerider' });
         let certs = [];
         if (won) {
           prog.r[D.id] = (prog.r[D.id] || 0) + 1;

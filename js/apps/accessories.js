@@ -217,6 +217,7 @@
       api.save('files', files);
       docName = name; dirty = false; setT(); saveDraft();
       api.sfx.seek(3);
+      const txt = pg.innerText.trim(); api.task('write-save', { text: txt, words: txt ? txt.split(/\s+/).length : 0 });
       return true;
     }
     async function save() { return docName ? write(docName) : saveAs(); }
@@ -506,6 +507,7 @@
       const t = $('.acl-t').value || '';
       day(dkey(sel.y, sel.m, sel.d), true).appts.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), t, text: x, alarm: $('.acl-a').checked && !!t });
       store(); $('.acl-x').value = ''; $('.acl-a').checked = false; render(); api.sfx.blip ? api.sfx.blip(900) : api.sfx.click();
+      api.task('calendar-add', { month: sel.m + 1, day: sel.d, text: x });
     }
     R.addEventListener('click', e => {
       const c = e.target.closest('.acl-c'); if (c) { go(view.y, view.m, +c.dataset.d); return; }
@@ -644,7 +646,7 @@
       <div class="acf-area"><div class="acf-stack"></div><div class="acf-listv sunken" hidden></div></div>
     </div>`;
     const R = W.body.firstElementChild, $ = s => R.querySelector(s);
-    const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => api.save('cards', cards), 400); };
+    const persist = c => { clearTimeout(saveT); saveT = setTimeout(() => { api.save('cards', cards); if (c) api.task('cardfile-add', { title: c.name, text: c.text }); }, 400); };
     function flipSound() { api.noise(0.05, { ft: 'bandpass', f: 3000, q: 1, vol: 0.12, decay: 1 }); }
     function render(anim) {
       const n = cards.length;
@@ -672,7 +674,7 @@
       if (r.btn !== 'OK') return;
       const name = r.el.querySelector('.acf-nn').value.trim() || 'New Card';
       const c = { id: 'c' + Date.now().toString(36), name, text: '' };
-      cards.push(c); sortCards(); cur = cards.indexOf(c); mode = 'card'; persist(); render(true); flipSound();
+      cards.push(c); sortCards(); cur = cards.indexOf(c); mode = 'card'; persist(c); render(true); flipSound();
       setTimeout(() => { const t = $('.acf-text'); t && t.focus(); }, 50);
     }
     async function del() {
@@ -713,8 +715,8 @@
     });
     R.addEventListener('input', e => {
       if (!cards[cur]) return;
-      if (e.target.classList.contains('acf-text')) { cards[cur].text = e.target.value; persist(); }
-      else if (e.target.classList.contains('acf-name')) { cards[cur].name = e.target.value; persist(); }
+      if (e.target.classList.contains('acf-text')) { cards[cur].text = e.target.value; persist(cards[cur]); }
+      else if (e.target.classList.contains('acf-name')) { cards[cur].name = e.target.value; persist(cards[cur]); }
       else if (e.target.classList.contains('acf-q')) { if (e.target.value.trim()) find(e.target.value, false); }
     });
     R.addEventListener('change', e => {
@@ -1395,6 +1397,7 @@
         song.name = (r.el.querySelector('.acm-sn').value.trim() || 'My Song').slice(0, 24);
         if (slots[pick] && (await api.msgBox('Music Maker', `Replace "${slots[pick].name}"?`, ['Yes', 'No'], 'warn')) !== 'Yes') return;
         slots[pick] = JSON.parse(JSON.stringify(song)); api.save('slots', slots); persist(); build(); api.sfx.seek(3);
+        api.task('music-save', { notes: song.g.reduce((a, g) => a + g.slice(0, song.steps).reduce((b, m) => b + (m.toString(2).split('1').length - 1), 0), 0) });
       } else {
         if (!slots[pick]) { await api.msgBox('Music Maker', 'That slot is empty.'); return slotDlg(false); }
         load(slots[pick]);

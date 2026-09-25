@@ -30,7 +30,7 @@
       else if (k === '⌫') { cur = cur.length > 1 ? cur.slice(0, -1) : '0'; scr.textContent = cur; }
       else if (k === '±') show(-cur);
       else if (k === '%') show(acc !== null ? acc * cur / 100 : cur / 100);
-      else if (k === '=') { if (op) { show(calc(acc, +cur, op)); acc = null; op = null; fresh = true; } }
+      else if (k === '=') { if (op) { const expr = `${+(+acc).toPrecision(12)} ${op} ${cur}`; show(calc(acc, +cur, op)); acc = null; op = null; fresh = true; if (cur !== 'Error') api.task('calc-result', { value: +cur, expr }); } }
       else { if (op && !fresh) show(calc(acc, +cur, op)); acc = +cur; op = k; fresh = true; }
     }
     W.body.querySelector('.keys').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k); });

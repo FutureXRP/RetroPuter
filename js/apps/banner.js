@@ -700,6 +700,7 @@
         for (let i = 0; i < 5; i++) api.noise(0.02, { at: 0.14 + i * 0.08, ft: 'bandpass', f: 800, q: 2, vol: 0.06, decay: 1 });
       } catch (e) {}
       api.stamp('banner-print');
+      api.task('banner-print', { text: PR.p.lines.concat(PR.p.type === 'card' ? PR.p.inside : []).map(l => l.trim()).filter(Boolean).join(' '), kind: PR.p.type });
       res = { p: PR.p, paper: PR.paper, sheet: PR.sheet, fresh: true };
       PR = null; resBack = 'preview';
       go('result');
