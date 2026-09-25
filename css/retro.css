@@ -762,3 +762,13 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .y2k-txt b{font:700 clamp(40px,10vw,96px)/1 Arial Black,Arial,sans-serif;color:#ffd700;text-shadow:0 0 18px #f0f,3px 3px 0 #800080}
 .y2k-txt span{font-size:18px;color:#cff}
 .y2k-skip{position:absolute;right:12px;bottom:12px}
+
+/* ---- Software Store checkout and coupon codes ---- */
+.co p{margin:0 0 8px}
+.co-lab{display:block;margin:4px 0}
+.co-row{display:flex;gap:6px;margin-top:3px}
+.co-in{flex:1;min-width:0;font:13px monospace;text-transform:uppercase;padding:3px 4px}
+.co-msg{min-height:1.3em;margin:4px 0;color:#800000;font-size:12px}
+.co-ok{color:#006000;font-weight:700}
+.co-short{color:#b00000}
+.co-open{margin-top:3px;font-size:11px;padding:1px 6px}
