@@ -720,12 +720,15 @@ const WALLET_START = 60, ALLOWANCE = 10, DAILY_EARN_CAP = 60;
 const wallet = () => store.get('wallet', WALLET_START);
 const setWallet = v => store.set('wallet', Math.round(v * 100) / 100);
 const money = v => '$' + Number(v).toFixed(2);
-/* Tester mode: open the site with ?tester to get unlimited money in THIS browser only (every
-   visitor still starts at $60). Leave it from Control Panel or with ?tester=off; money resets to $60. */
-const tester = () => store.get('tester', false);
+/* Tester mode (ARCHIVED): ?tester used to give unlimited money in this browser. It's switched off now that
+   store coupon codes exist (see COUPON_HASHES). Set TESTER_MODE_ENABLED = true to bring it back.
+   While off, ?tester does nothing and anyone still in tester mode is switched out (games kept, money back to $60). */
+const TESTER_MODE_ENABLED = false;
+const tester = () => TESTER_MODE_ENABLED && store.get('tester', false);
 (() => {
+  if (!TESTER_MODE_ENABLED && store.get('tester', false)) leaveTester(true);
   const m = location.search.match(/[?&]tester(?:=([^&]*))?/i); if (!m) return;
-  if ((m[1] || '').toLowerCase() === 'off') leaveTester(true); else store.set('tester', true);
+  if ((m[1] || '').toLowerCase() === 'off') leaveTester(true); else if (TESTER_MODE_ENABLED) store.set('tester', true);
   try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])tester(=[^&]*)?&?/i, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) {}
 })();
 function leaveTester(keepGames) {
