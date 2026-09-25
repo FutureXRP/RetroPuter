@@ -2546,11 +2546,18 @@ function initRoom() {
 }
 
 /* ---------- startup sponsor: a short, skippable "brought to you by" screen at the first boot of a visit ---------- */
-// The sponsor comes from js/ads.js (window.RETRO_SPONSOR). It never repeats within the same browser tab session.
+// The sponsor comes from js/ads.js (window.RETRO_SPONSOR). It plays every time a computer starts, including
+// when you switch years. Raise SPONSOR_COOLDOWN_MIN to space it out (e.g. 5 = at most once every 5 minutes).
+const SPONSOR_COOLDOWN_MIN = 0;
 function sponsorDue() {
   const sp = window.RETRO_SPONSOR;
   if (!sp || !sp.html || !sp.href) return null;
-  try { if (sessionStorage.getItem('r1990:sponsorShown')) return null; sessionStorage.setItem('r1990:sponsorShown', '1'); } catch (e) {}
+  try {
+    if (sessionStorage.getItem('r1990:sponsorOff') === '1') return null; // test scripts only
+    const last = +sessionStorage.getItem('r1990:sponsorShown') || 0;
+    if (last && Date.now() - last < SPONSOR_COOLDOWN_MIN * 60000) return null;
+    sessionStorage.setItem('r1990:sponsorShown', String(Date.now()));
+  } catch (e) {}
   return sp;
 }
 async function runSponsor(sp, live) {
