@@ -1485,32 +1485,73 @@ function allSaved() {
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('r1990:')) out[k] = localStorage.getItem(k); } } catch (e) {}
   return out;
 }
+// A save file is plain JSON: { format, version, savedAt, user, data: { 'r1990:...': '...' } }.
+const SAVE_FORMAT = 'retroputer-save';
+function saveFileBlob() {
+  const body = JSON.stringify({ format: SAVE_FORMAT, version: 1, savedAt: new Date().toISOString(), user: store.get('user', 'kidsurfer'), data: allSaved() });
+  const d = new Date(), name = `RetroPuter-save-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
+  return { body, name, blob: new Blob([body], { type: 'application/json' }) };
+}
+// Accepts a save file's text or an old-style backup code; returns the r1990: keys, or null.
+function parseBackup(text) {
+  text = String(text || '').trim(); let data = null;
+  try { const j = JSON.parse(text); data = j && j.format === SAVE_FORMAT ? j.data : j; } catch (e) {
+    try { data = JSON.parse(decodeURIComponent(escape(atob(text)))); } catch (e2) { return null; }
+  }
+  if (!data || typeof data !== 'object') return null;
+  const keys = Object.keys(data).filter(k => k.startsWith('r1990:') && typeof data[k] === 'string');
+  return keys.length ? Object.fromEntries(keys.map(k => [k, data[k]])) : null;
+}
+async function applyBackup(data, from) {
+  if (!data) { msgBox('Restore', `That ${from} doesn't look like a RetroPuter save. Make sure it's the whole thing and try again.`, ['OK'], 'warn'); return; }
+  const r = await msgBox('Restore', 'This replaces everything saved in this browser with the save you picked. Continue?', ['Restore', 'Cancel'], 'warn');
+  if (r !== 'Restore') return;
+  try { Object.keys(allSaved()).forEach(k => localStorage.removeItem(k)); Object.keys(data).forEach(k => localStorage.setItem(k, data[k])); } catch (e) { msgBox('Restore', 'This browser ran out of room while restoring. Try a different browser.', ['OK'], 'stop'); return; }
+  location.reload();
+}
 function openBackup() {
-  openWin({ id: 'backup', title: 'Backup & Restore', icon: 'cp', w: 440, fixed: true, autoH: true, build(W) {
-    let code = '';
-    try { code = btoa(unescape(encodeURIComponent(JSON.stringify(allSaved())))); } catch (e) {}
-    W.body.innerHTML = `<div class="cp"><p style="margin:0">Your games, money, notes and scores are saved in this browser automatically. To move them to another computer or browser, copy this backup code and paste it there.</p>
-      <textarea rows="5" readonly data-code style="width:100%;font:11px monospace;word-break:break-all"></textarea>
-      <div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-copy>Copy code</button></div>
-      <fieldset><legend>Restore from a code</legend><textarea rows="3" data-in style="width:100%;font:11px monospace" placeholder="Paste a backup code here"></textarea><button class="btn" data-restore>Restore</button></fieldset>
+  openWin({ id: 'backup', title: 'Backup & Restore', icon: 'cp', w: 460, fixed: true, autoH: true, build(W) {
+    const f = saveFileBlob(), kb = Math.max(1, Math.round(f.body.length / 1024));
+    const canShare = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([f.blob], f.name, { type: 'application/json' })] })); } catch (e) { return false; } })();
+    const last = store.get('lastBackup', '');
+    let code = ''; try { code = btoa(unescape(encodeURIComponent(JSON.stringify(allSaved())))); } catch (e) {}
+    W.body.innerHTML = `<div class="cp bk"><p>Everything (games, money, notes, pictures, scores) is saved in <b>this browser only</b>. No account needed. To keep it safe or move it to another computer or phone, save it to a file.</p>
+      <fieldset><legend>Save my progress</legend>
+        <div class="bk-row"><button class="btn" data-save>Save to file (${kb} KB)</button>${canShare ? '<button class="btn" data-share>Send to my other device…</button>' : ''}</div>
+        <small>${last ? 'Last saved to a file: ' + esc(new Date(last).toLocaleString()) + '.' : 'Not saved to a file yet.'} Clearing your browser's site data, private windows, and Safari after 7 days without a visit all erase progress, so save a file now and then.</small>
+      </fieldset>
+      <fieldset><legend>Load progress</legend>
+        <div class="bk-row"><button class="btn" data-load>Load from file…</button><input type="file" accept=".json,application/json,text/plain" data-file hidden></div>
+        <small>On the other device, open RetroPuter, go to Control Panel, Backup &amp; Restore, and load the file. It replaces what's there.</small>
+      </fieldset>
+      <details class="bk-code"><summary>Use a backup code instead (copy and paste)</summary>
+        <textarea rows="4" readonly data-code></textarea><div class="bk-row"><button class="btn" data-copy>Copy code</button></div>
+        <textarea rows="3" data-in placeholder="Paste a backup code here"></textarea><div class="bk-row"><button class="btn" data-restore>Restore from code</button></div>
+      </details>
       <div style="text-align:right"><button class="btn" data-ok>Close</button></div></div>`;
-    const ta = W.body.querySelector('[data-code]'); ta.value = code;
-    W.body.querySelector('[data-copy]').onclick = async e => { ta.select(); try { await navigator.clipboard.writeText(code); e.target.textContent = 'Copied!'; } catch (err) { document.execCommand && document.execCommand('copy'); e.target.textContent = 'Selected, press Ctrl+C'; } };
-    W.body.querySelector('[data-restore]').onclick = async () => {
-      let data;
-      try { data = JSON.parse(decodeURIComponent(escape(atob(W.body.querySelector('[data-in]').value.trim())))); } catch (e) { msgBox('Restore', "That doesn't look like a backup code. Copy the whole thing and try again.", ['OK'], 'warn'); return; }
-      const keys = Object.keys(data || {}).filter(k => k.startsWith('r1990:'));
-      if (!keys.length) { msgBox('Restore', 'That backup code is empty.', ['OK'], 'warn'); return; }
-      const r = await msgBox('Restore', 'This replaces everything saved on this computer with the backup. Continue?', ['Restore', 'Cancel'], 'warn');
-      if (r !== 'Restore') return;
-      try { Object.keys(allSaved()).forEach(k => localStorage.removeItem(k)); keys.forEach(k => localStorage.setItem(k, data[k])); } catch (e) {}
-      location.reload();
+    const mark = () => store.set('lastBackup', Date.now());
+    W.body.querySelector('[data-save]').onclick = () => {
+      const g = saveFileBlob(), url = URL.createObjectURL(g.blob), a = document.createElement('a');
+      a.href = url; a.download = g.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+      mark(); sfx.seek(6); toast(`Saved ${g.name}. Keep it somewhere safe!`);
     };
+    const sh = W.body.querySelector('[data-share]');
+    if (sh) sh.onclick = async () => {
+      const g = saveFileBlob();
+      try { await navigator.share({ files: [new File([g.blob], g.name, { type: 'application/json' })], title: 'My RetroPuter save', text: 'Open RetroPuter, go to Control Panel, Backup & Restore, and choose Load from file.' }); mark(); toast('Save sent!'); }
+      catch (e) { if (e && e.name !== 'AbortError') msgBox('Send', "Sharing didn't work here. Use Save to file instead.", ['OK'], 'warn'); }
+    };
+    const fileIn = W.body.querySelector('[data-file]');
+    W.body.querySelector('[data-load]').onclick = () => fileIn.click();
+    fileIn.onchange = () => { const file = fileIn.files && fileIn.files[0]; if (!file) return; const rd = new FileReader(); rd.onload = () => applyBackup(parseBackup(rd.result), 'file'); rd.readAsText(file); fileIn.value = ''; };
+    const ta = W.body.querySelector('[data-code]'); ta.value = code;
+    W.body.querySelector('[data-copy]').onclick = async e => { ta.select(); try { await navigator.clipboard.writeText(code); e.target.textContent = 'Copied!'; } catch (err) { document.execCommand && document.execCommand('copy'); e.target.textContent = 'Selected, press Ctrl+C'; } mark(); };
+    W.body.querySelector('[data-restore]').onclick = () => applyBackup(parseBackup(W.body.querySelector('[data-in]').value), 'code');
     W.body.querySelector('[data-ok]').onclick = () => closeWin(W);
   }});
 }
 async function eraseAll() {
-  const r = await msgBox('Erase hard drive', 'This deletes everything: purchased games, money, notes, high scores and guestbook entries. It can\'t be undone (unless you saved a backup code).\n\nErase everything?', ['Erase', 'Cancel'], 'stop');
+  const r = await msgBox('Erase hard drive', 'This deletes everything: purchased games, money, notes, high scores and guestbook entries. It can\'t be undone (unless you saved a save file or backup code).\n\nErase everything?', ['Erase', 'Cancel'], 'stop');
   if (r !== 'Erase') return;
   try { Object.keys(allSaved()).forEach(k => localStorage.removeItem(k)); } catch (e) {}
   location.reload();
@@ -1569,7 +1610,7 @@ function openHelp(page) {
     out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
       <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back, plus $1 for each day in a row (up to $7 extra).`, `<b>Work:</b> open the ${era.year < 1995 ? 'Job Board' : 'Job Center'}${dos ? ' (type <code>JOBS</code>)' : ''} for 3 daily jobs, and clock in to earn the ${Y} minimum wage (${money(MIN_WAGE[era.id] || 4)} an hour) while you use the computer. Collect your paycheck there.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
       + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
-      + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To move your stuff to another computer or browser: <b>Control Panel, Backup &amp; restore</b>.'])
+      + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To keep it safe or move it to another computer or phone (no account needed): <b>Control Panel, Backup &amp; Restore, Save to file</b>, then <b>Load from file</b> on the other device.'])
     });
     const free = mine.filter(a => !(PLUGINS[a.id] && PLUGINS[a.id].kind === 'store'));
     const bought = mine.filter(a => PLUGINS[a.id] && PLUGINS[a.id].kind === 'store');
