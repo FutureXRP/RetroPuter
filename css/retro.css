@@ -797,3 +797,13 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .wk-stub pre{margin:0 0 10px;font:13px/1.45 "Courier New",monospace;color:#000;white-space:pre;overflow-x:auto;border:1px dashed #a08040;padding:8px;background:#fff}
 .wk-stub .btns{text-align:center}
 .era-1985 .wk-stub,.era-1985 .wk-stub pre{background:#000;color:var(--phos,#33ff66);border-color:var(--phos,#33ff66);font-family:var(--dos)}
+
+/* ---- Backup & Restore ---- */
+.bk p{margin:0 0 6px}
+.bk fieldset{margin:6px 0}
+.bk small{display:block;margin-top:4px;color:#444;font-size:11px}
+.bk-row{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+.bk-code{margin:6px 0}.bk-code summary{cursor:pointer}
+.bk-code textarea{width:100%;box-sizing:border-box;font:11px monospace;word-break:break-all;margin-top:4px}
+.era-1985 .bk small{color:var(--phos,#33ff66)}
+.era-1985 .bk-code textarea{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66)}
