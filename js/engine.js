@@ -1161,39 +1161,19 @@ function boxArt(p) {
   const b = p.box || {};
   return `<div class="box3d" style="--bx:${b.bg || '#223'};--fg:${b.fg || '#fff'};--ac:${b.accent || '#fc0'}"><div class="bx-top">${esc(p.publisher || 'Horizon Games')}</div><div class="bx-ico">${p.icon || ''}</div><div class="bx-title">${esc(p.label)}</div><div class="bx-tag">${esc(p.tagline || '')}</div><div class="bx-foot">${p.year}</div></div>`;
 }
-/* Tester mode: travel to a year and open a program there once the desktop is up. */
-function openInYear(id, yr) {
-  try { sessionStorage.setItem('r1990:openAfterBoot', id); } catch (e) {}
-  if (tester() && PLUGINS[id] && PLUGINS[id].kind === 'store') store.set('owned', [...new Set([...owned(), id])]);
-  if (yr === era.id && booted) { closeAll(); openApp(id); return; }
-  switchEra(yr);
-}
-function openAfterBoot() {
-  let id = null; try { id = sessionStorage.getItem('r1990:openAfterBoot'); sessionStorage.removeItem('r1990:openAfterBoot'); } catch (e) {}
-  if (id && booted) setTimeout(() => { if (booted) openApp(id); }, 400);
-}
 function openStore(focusId) {
   const W = openWin({ id: 'store', title: 'Software Store', icon: 'shop', w: 680, h: 500, build(W) {
     W.refresh = () => {
       const all = Object.values(PLUGINS).filter(p => p.kind === 'store').sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
       const now = all.filter(p => p.year <= era.year), later = all.filter(p => p.year > era.year);
       const S = storeInfo();
-      // Free programs that ship with this year, and (tester mode) everything that runs only in other years.
-      const byLabel = (a, b) => a.label.localeCompare(b.label);
-      const freeHere = apps().filter(a => (a.cat === 'game' || a.cat === 'acc') && !a.bought).map(a => ({ id: a.id, label: a.label, cat: a.cat, icon: ICONS[a.icon] || '', help: helpLine(a) })).sort((a, b) => (a.cat === 'game' ? 0 : 1) - (b.cat === 'game' ? 0 : 1) || byLabel(a, b));
-      const elsewhere = Object.values(PLUGINS).map(p => Object.assign(Object.create(p), { yrs: p.kind === 'store' ? (p.year > era.year ? ERA_IDS.filter(id => ERAS[id].year >= p.year).slice(0, 1) : []) : (p.eras || []).filter(id => id !== era.id && ERAS[id]) }))
-        .filter(p => p.yrs.length && !(p.kind !== 'store' && pluginRuns(p))).sort(byLabel);
       W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">${tester() ? `Tester mode<b>Unlimited</b><small><button class="btn" data-all>Install all games</button></small>` : `Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small>`}</div></div>
         <div class="shop-list">${now.map(p => {
           const own = isOwned(p.id), paid = store.get('pending', []).includes(p.id);
           const act = own ? `<span class="own">✔ Installed</span><button class="btn" data-play>Play</button>` : paid ? `<span class="own">Paid</span><button class="btn" data-inst>Install</button>` : `<span class="price">${money(p.price)}</span><button class="btn" data-buy>Buy</button>`;
           return `<div class="shop-item${p.id === focusId ? ' hi' : ''}" data-id="${p.id}">${boxArt(p)}<div class="shop-txt"><b>${esc(p.label)}</b><small>${esc(p.publisher || '')} · ${p.year} · ${esc(p.genre || 'Game')}</small><p>${esc(p.blurb || '')}</p><div class="shop-buy">${act}</div></div></div>`;
         }).join('') || '<p>No titles yet. Check back soon!</p>'}</div>
-        ${later.length ? `<div class="shop-later"><b>Coming in the future:</b> ${later.map(p => `${esc(p.label)} <small>(needs ${reqOS(p.year)})</small>`).join(', ')}</div>` : ''}
-        ${freeHere.length ? `<div class="shop-free"><h4>Free with this computer</h4><p>These come with ${esc(era.os.name)}. No need to buy them!</p>${freeHere.map(p => `<div class="shop-row" data-id="${p.id}"><span class="ico">${p.icon || ''}</span><span><b>${esc(p.label)}</b><small>${esc(p.help || '')}</small></span><button class="btn" data-open>Play</button></div>`).join('')}</div>` : ''}
-        ${tester() && elsewhere.length ? `<div class="shop-free shop-tester"><h4>Tester: programs in other years</h4><p>Jumps to that year and opens the program once the computer is on.</p>${elsewhere.map(p => `<div class="shop-row" data-id="${p.id}"><span class="ico">${p.icon || ''}</span><span><b>${esc(p.label)}</b><small>${esc(p.kind === 'store' ? 'Store game' : 'Free program')} · ${esc(p.help || p.tagline || '')}</small></span><span class="shop-go">${p.yrs.map(y => `<button class="btn" data-go="${y}">Open in ${ERAS[y].year}</button>`).join('')}</span></div>`).join('')}</div>` : ''}</div>`;
-      $$('[data-open]', W.body).forEach(b => b.onclick = () => openApp(b.closest('[data-id]').dataset.id));
-      $$('[data-go]', W.body).forEach(b => b.onclick = () => openInYear(b.closest('[data-id]').dataset.id, b.dataset.go));
+        ${later.length ? `<div class="shop-later"><b>Coming in the future:</b> ${later.map(p => `${esc(p.label)} <small>(needs ${reqOS(p.year)})</small>`).join(', ')}</div>` : ''}</div>`;
       $$('[data-buy]', W.body).forEach(b => b.onclick = () => buy(b.closest('[data-id]').dataset.id));
       const allB = W.body.querySelector('[data-all]'); if (allB) allB.onclick = installAll;
       $$('[data-play]', W.body).forEach(b => b.onclick = () => launchApp(b.closest('[data-id]').dataset.id));
@@ -1382,7 +1362,7 @@ function openHelp(page) {
     });
     out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
       <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
-      + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.', `The ${esc(S.name)} also lists the <b>free programs</b> that come with this computer, with a Play button for each.`])
+      + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
       + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To move your stuff to another computer or browser: <b>Control Panel, Backup &amp; restore</b>.'])
     });
     const free = mine.filter(a => !(PLUGINS[a.id] && PLUGINS[a.id].kind === 'store'));
@@ -2640,7 +2620,7 @@ function finishDesk() {
   // First visit to this year: the Quick Help guide (it replaces the old automatic Read Me).
   const firstHelp = !estore.get('seenHelp', false);
   if (firstHelp) { estore.set('seenHelp', true); estore.set('seenReadme', true); }
-  const afterParty = () => { if (!booted) return; if (firstHelp) openHelp(); digCapsules(); openAfterBoot(); };
+  const afterParty = () => { if (!booted) return; if (firstHelp) openHelp(); digCapsules(); };
   if (era.id === '2000' && !estore.get('y2kParty', false)) { estore.set('y2kParty', true); setTimeout(() => { if (booted) y2kParty(afterParty); }, 500); }
   else setTimeout(afterParty, 600);
 }
