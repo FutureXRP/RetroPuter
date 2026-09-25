@@ -507,7 +507,7 @@ const PLUGINS = {};
   if (p.css) { const st = document.createElement('style'); st.dataset.app = p.id; st.textContent = p.css; document.head.appendChild(st); }
 });
 const owned = () => store.get('owned', []);
-const isOwned = id => owned().includes(id);
+const isOwned = id => owned().includes(id) || (store.get('allAccess', false) === true && !!PLUGINS[id] && PLUGINS[id].kind === 'store');
 const pluginRuns = p => p.kind === 'store' ? (p.year || 1990) <= era.year && isOwned(p.id) : (p.eras || []).includes(era.id);
 const pluginDef = p => ({ id: p.id, label: p.label, icon: 'app-' + p.id, cat: p.cat || (p.kind === 'store' ? 'game' : 'game'), bought: p.kind === 'store', open: () => launchApp(p.id) });
 // Everything that runs in this year, in display order.
@@ -1167,7 +1167,7 @@ function openStore(focusId) {
       const all = Object.values(PLUGINS).filter(p => p.kind === 'store').sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
       const now = all.filter(p => p.year <= era.year), later = all.filter(p => p.year > era.year);
       const S = storeInfo();
-      W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">${tester() ? `Tester mode<b>Unlimited</b><small><button class="btn" data-all>Install all games</button></small>` : `Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small>`}</div></div>
+      W.body.innerHTML = `<div class="shop"><div class="shop-hd"><div><b>${esc(S.name)}</b><small>${esc(S.sub)}</small></div><div class="shop-wallet">${tester() ? `Tester mode<b>Unlimited</b><small><button class="btn" data-all>Install all games</button></small>` : `Your money<b>${money(wallet())}</b><small>Win games and get a ${money(ALLOWANCE)} allowance every day you visit</small>`}<small><button class="btn co-open" data-coupon>${allAccess() ? 'All access' : 'Coupon code…'}</button></small></div></div>
         <div class="shop-list">${now.map(p => {
           const own = isOwned(p.id), paid = store.get('pending', []).includes(p.id);
           const act = own ? `<span class="own">✔ Installed</span><button class="btn" data-play>Play</button>` : paid ? `<span class="own">Paid</span><button class="btn" data-inst>Install</button>` : `<span class="price">${money(p.price)}</span><button class="btn" data-buy>Buy</button>`;
@@ -1176,6 +1176,7 @@ function openStore(focusId) {
         ${later.length ? `<div class="shop-later"><b>Coming in the future:</b> ${later.map(p => `${esc(p.label)} <small>(needs ${reqOS(p.year)})</small>`).join(', ')}</div>` : ''}</div>`;
       $$('[data-buy]', W.body).forEach(b => b.onclick = () => buy(b.closest('[data-id]').dataset.id));
       const allB = W.body.querySelector('[data-all]'); if (allB) allB.onclick = installAll;
+      const coB = W.body.querySelector('[data-coupon]'); if (coB) coB.onclick = () => openCheckout(null);
       $$('[data-play]', W.body).forEach(b => b.onclick = () => launchApp(b.closest('[data-id]').dataset.id));
       $$('[data-inst]', W.body).forEach(b => b.onclick = () => install(PLUGINS[b.closest('[data-id]').dataset.id]));
       const hi = W.body.querySelector('.shop-item.hi'); if (hi) hi.scrollIntoView({ block: 'nearest' });
@@ -1185,15 +1186,81 @@ function openStore(focusId) {
   if (focusId && W.refresh) W.refresh();
   return W;
 }
-async function buy(id) {
-  const p = PLUGINS[id]; if (!p || isOwned(id)) return;
-  if (!tester() && wallet() < p.price) {
-    msgBox('Not enough money', `${p.label} costs ${money(p.price)}, and you have ${money(wallet())}.\n\nWin some of the free games (Mines, Worm, the card games) to earn more, or come back tomorrow for your allowance.`, ['OK'], 'warn');
-    return;
+/* ---------- Coupon codes (Software Store checkout) ----------
+   Only a SHA-256 fingerprint of each code lives here, never the code itself, so reading this file doesn't reveal it.
+   A valid code gives this browser "all access": every store game is free and installed, including future ones.
+   To add a code: sha256('retroputer-coupon-v1:' + CODE_WITHOUT_DASHES_UPPERCASE) and append the hex below. */
+const COUPON_HASHES = ['7a7bad30fcecdbc4756465b4d170d2a59417185e05a9f4465313eb915d100576'];
+const allAccess = () => store.get('allAccess', false) === true;
+function sha256hex(str) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const bytes = Array.from(new TextEncoder().encode(str)), bitLen = bytes.length * 8;
+  bytes.push(0x80); while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push(i > 3 ? 0 : (bitLen >>> (i * 8)) & 255);
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19], w = new Array(64);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let o = 0; o < bytes.length; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = (bytes[o + i * 4] << 24) | (bytes[o + i * 4 + 1] << 16) | (bytes[o + i * 4 + 2] << 8) | bytes[o + i * 4 + 3];
+    for (let i = 16; i < 64; i++) { const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10); w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0; }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0; H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
   }
-  const r = await msgBox('Confirm purchase', tester() ? `Install ${p.label}? (Tester mode: it's free.)` : `Buy ${p.label} for ${money(p.price)}?\n\nYou'll have ${money(wallet() - p.price)} left.`, ['Buy it', 'Cancel'], 'info');
-  if (r !== 'Buy it') return;
-  if (!tester()) setWallet(wallet() - p.price);
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+// Returns 'ok', 'bad' or 'wait' (too many wrong tries: a one-minute pause).
+function tryCoupon(input) {
+  let tries = {}; try { tries = JSON.parse(sessionStorage.getItem('r1990:couponTries') || '{}'); } catch (e) {}
+  if (tries.until && Date.now() < tries.until) return 'wait';
+  const norm = String(input).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (norm && COUPON_HASHES.includes(sha256hex('retroputer-coupon-v1:' + norm))) {
+    store.set('allAccess', true);
+    const ids = Object.values(PLUGINS).filter(p => p.kind === 'store').map(p => p.id);
+    store.set('owned', [...new Set([...store.get('owned', []), ...ids])]); store.set('pending', []);
+    try { sessionStorage.removeItem('r1990:couponTries'); } catch (e) {}
+    refreshShell(); if (wins.store && wins.store.refresh) wins.store.refresh();
+    sfx.tada(); return 'ok';
+  }
+  tries.n = (tries.n || 0) + 1; if (tries.n >= 5) { tries.n = 0; tries.until = Date.now() + 60000; }
+  try { sessionStorage.setItem('r1990:couponTries', JSON.stringify(tries)); } catch (e) {}
+  return 'bad';
+}
+// Checkout: the item, its price, a coupon box, and Buy / Cancel. Without an item it's just the coupon box.
+function openCheckout(p) {
+  return openWin({ id: 'checkout', title: p ? 'Checkout' : 'Coupon code', icon: 'shop', w: 380, center: true, fixed: true, noMin: true, autoH: true, build(W) {
+    const draw = () => {
+      const free = tester() || allAccess(), short = p && !free && wallet() < p.price;
+      W.body.innerHTML = `<div class="dlg co">${p ? `<p><b>${esc(p.label)}</b><br>Price: ${free ? '<s>' + money(p.price) + '</s> <b>FREE</b>' : money(p.price)}${free ? '' : `<br>Your money: ${money(wallet())}${short ? ' <b class="co-short">(not enough)</b>' : ''}`}</p>` : ''}
+        ${allAccess() ? '<p class="co-ok">Coupon active: every game is free for you.</p>' : `<label class="co-lab">Coupon code<div class="co-row"><input class="co-in" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"><button class="btn" data-apply>Apply</button></div></label><div class="co-msg" role="status"></div>`}
+        <div class="btns">${p ? `<button class="btn" data-buy${short ? ' disabled' : ''}>${free ? 'Install' : 'Buy it'}</button>` : ''}<button class="btn" data-x>${p ? 'Cancel' : 'Close'}</button></div></div>`;
+      const inp = W.body.querySelector('.co-in'), msg = W.body.querySelector('.co-msg');
+      const apply = () => {
+        const r = tryCoupon(inp.value);
+        if (r === 'ok') { draw(); toast('Coupon accepted! Every store game is now free and installed.'); if (!p) setTimeout(() => closeWin(W), 1600); }
+        else { msg.textContent = r === 'wait' ? 'Too many tries. Wait a minute and try again.' : "That code didn't work. Check it and try again."; sfx.ding(); }
+      };
+      if (inp) { W.body.querySelector('[data-apply]').onclick = apply; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); apply(); } }; }
+      const b = W.body.querySelector('[data-buy]');
+      if (b) b.onclick = () => { closeWin(W); completePurchase(p); };
+      W.body.querySelector('[data-x]').onclick = () => closeWin(W);
+      if (short) msg && !msg.textContent && (msg.textContent = 'Win free games or wait for your daily allowance to earn more, or enter a coupon code.');
+    };
+    draw();
+  }});
+}
+function buy(id) {
+  const p = PLUGINS[id]; if (!p || isOwned(id)) return;
+  openCheckout(p);
+}
+function completePurchase(p) {
+  if (isOwned(p.id)) return;
+  const free = tester() || allAccess();
+  if (!free && wallet() < p.price) return;
+  if (!free) setWallet(wallet() - p.price);
   store.set('pending', [...new Set([...store.get('pending', []), p.id])]);
   if (wins.store && wins.store.refresh) wins.store.refresh();
   install(p);
