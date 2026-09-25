@@ -234,6 +234,7 @@ const net = { connected: false, since: 0, dropped: false, dropTimer: null };
 /* ---------- icons ---------- */
 const svg = (inner, vb = '0 0 32 32') => `<svg viewBox="${vb}" shape-rendering="crispEdges" aria-hidden="true">${inner}</svg>`;
 const ICONS = {
+  work: svg('<rect x="4" y="10" width="24" height="17" rx="2" fill="#8a5a2b" stroke="#000"/><rect x="11" y="5" width="10" height="6" fill="none" stroke="#000" stroke-width="2"/><rect x="4" y="16" width="24" height="2" fill="#5a3a1b"/><rect x="14" y="15" width="4" height="4" fill="#d8b84a" stroke="#000"/>'),
   passport: svg('<rect x="6" y="3" width="20" height="26" rx="2" fill="#1a3a8a" stroke="#000"/><rect x="8" y="5" width="16" height="22" fill="none" stroke="#d8b84a"/><circle cx="16" cy="14" r="5" fill="none" stroke="#d8b84a" stroke-width="1.5"/><path d="M11 14h10M16 9v10" stroke="#d8b84a"/><rect x="11" y="22" width="10" height="2" fill="#d8b84a"/>'),
   capsule: svg('<rect x="4" y="12" width="24" height="12" rx="6" fill="#c0c0c0" stroke="#000"/><rect x="4" y="12" width="12" height="12" rx="6" fill="#e05050" stroke="#000"/><rect x="10" y="12" width="6" height="12" fill="#e05050"/><path d="M16 12v12" stroke="#000"/><path d="M8 8l2 3M16 5v4M24 8l-2 3" stroke="#d8b84a" stroke-width="2"/>'),
   dial: svg('<rect x="3" y="17" width="26" height="10" fill="#c0c0c0" stroke="#000"/><rect x="4" y="18" width="24" height="1" fill="#fff"/><rect x="6" y="22" width="3" height="2" fill="#0c0"/><rect x="11" y="22" width="3" height="2" fill="#f00"/><rect x="16" y="22" width="3" height="2" fill="#ff0"/><rect x="21" y="21" width="5" height="4" fill="#808080"/><path d="M6 13 Q16 3 26 13 L26 16 L21 16 L21 13 Q16 10 11 13 L11 16 L6 16 Z" fill="#000"/>'),
@@ -492,6 +493,7 @@ const APP_DEFS = {
   store: () => ({ label: 'Software Store', icon: 'shop', cat: 'main', open: () => openStore() }),
   files: () => ({ label: era.shell === 'start' ? 'My Computer' : 'File Manager', icon: 'pc', cat: 'main', open: () => openFiles() }),
   help: () => ({ label: 'Quick Help', icon: 'info', cat: 'main', open: () => openHelp() }),
+  work: () => ({ label: era.year < 1995 ? 'Job Board' : 'Job Center', icon: 'work', cat: 'main', open: () => openWork() }),
   passport: () => ({ label: 'Time Passport', icon: 'passport', cat: 'main', open: () => openPassport() }),
   capsule: () => ({ label: 'Time Capsule', icon: 'capsule', cat: 'acc', open: () => openCapsule() })
 };
@@ -512,7 +514,7 @@ const pluginRuns = p => p.kind === 'store' ? (p.year || 1990) <= era.year && isO
 const pluginDef = p => ({ id: p.id, label: p.label, icon: 'app-' + p.id, cat: p.cat || (p.kind === 'store' ? 'game' : 'game'), bought: p.kind === 'store', open: () => launchApp(p.id) });
 // Everything that runs in this year, in display order.
 function apps() {
-  const core = [...era.apps, 'store', 'files', 'passport', 'capsule', 'help'].map(id => Object.assign({ id }, APP_DEFS[id]()));
+  const core = [...era.apps, 'store', 'files', 'work', 'passport', 'capsule', 'help'].map(id => Object.assign({ id }, APP_DEFS[id]()));
   return core.concat(Object.values(PLUGINS).filter(pluginRuns).map(pluginDef));
 }
 const findApp = id => apps().find(a => a.id === id);
@@ -534,7 +536,9 @@ function appApi(p, W) {
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
     openUrl: url => era.apps.includes('nv') ? openBrowser(url) : null,
     openApp,
-    stamp: id => stamp(id)
+    stamp: id => stamp(id),
+    task: (type, data) => taskEvent(type, data),
+    jobs: () => (typeof todaysJobs === 'function' ? todaysJobs() : [])
   };
 }
 function launchApp(id) {
@@ -574,6 +578,8 @@ const STAMPS = [
   { id: 'games-room-win', year: 2000, label: 'Won online', hint: 'Win a game in the Games Room.' }
 ];
 const PASSPORT_BONUS = 25;
+// Work Center: apps report finished work with api.task(type, data); see JOBS below.
+function taskEvent(type, data) { try { if (typeof workTask === 'function') workTask(type, data || {}); } catch (e) { console.error(e); } }
 function stamp(id) {
   const s = STAMPS.find(x => x.id === id); if (!s) return false;
   const got = store.get('stamps', {}); if (got[id]) return false;
@@ -582,6 +588,131 @@ function stamp(id) {
   if (STAMPS.every(x => got[x.id])) setTimeout(() => { earn(PASSPORT_BONUS, 'filling your Time Traveler Passport'); msgBox('Time Traveler Passport', `You collected every stamp from 1985 to 2000. You're an official Time Traveler!\n\nHere's a ${money(PASSPORT_BONUS)} bonus.`); }, 1200);
   if (wins.passport && wins.passport.refresh) wins.passport.refresh();
   return true;
+}
+
+/* ---------- Work Center: daily jobs checked automatically, an hourly wage, and a paycheck ----------
+   Apps report finished work with api.task(type, data) (event names: js/apps/README.md). Each year gets 3 jobs a day,
+   picked from JOBS by date. Jobs only use programs that exist in that year. Pay is collected on payday. */
+const MIN_WAGE = { '1985': 3.35, '1990': 3.80, '1995': 4.25, '2000': 5.15 }; // US federal minimum wage that year (1990: from April 1)
+const WAGE_HOURS_CAP = 8;              // a full workday of paid (work) hours per real day
+const TIME_SPEED = 10;                 // on the computer a workday flies by: 1 real minute = 10 work minutes
+const RANKS = [{ n: 0, name: 'Intern', x: 1 }, { n: 10, name: 'Assistant', x: 1.25 }, { n: 30, name: 'Manager', x: 1.5 }];
+const BIZ = ['Pete\'s Pizza', 'Sunny Side Bakery', 'Maple Lane Hardware', 'Blue Moon Video', 'Rocket Car Wash', 'Happy Paws Pet Shop', 'Main Street Bikes', 'Corner Cafe'];
+const PEOPLE = [['Mrs. Alvarez', 'alvarez'], ['Mr. Okafor', 'okafor'], ['Ms. Chen', 'chen'], ['Mr. Patel', 'patel'], ['Mrs. Novak', 'novak'], ['Coach Rivera', 'rivera']];
+const WORDS = [['meeting', 'Tuesday'], ['delivery', 'Friday'], ['inventory', 'boxes'], ['party', 'balloons'], ['sale', 'coupons'], ['picnic', 'sandwiches']];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const lc = s => String(s || '').toLowerCase();
+// Each job: app (must run this year), event, pay, make(rnd) -> { title, text, check(data), params }.
+const JOBS = [
+  { id: 'memo', app: 'np', event: 'note-save', pay: 2, make: r => { const [a, b] = r.pick(WORDS), p = r.pick(PEOPLE); return { title: 'Type a memo', from: p, text: `Type a memo in Notepad for ${p[0]} about the ${a}. It must include the words "${a}" and "${b}". Then choose File, Save.`, check: d => lc(d.text).includes(lc(a)) && lc(d.text).includes(lc(b)) }; } },
+  { id: 'edit', app: 'np', event: 'note-save', pay: 2, eras: ['1985'], make: r => { const [a, b] = r.pick(WORDS), p = r.pick(PEOPLE); return { title: 'Type a memo', from: p, text: `Type EDIT at the prompt and write a memo about the ${a}. Include "${a}" and "${b}", then save.`, check: d => lc(d.text).includes(lc(a)) && lc(d.text).includes(lc(b)) }; } },
+  { id: 'list', app: 'np', event: 'note-save', pay: 2, make: r => { const b = r.pick(BIZ); return { title: 'Make a shopping list', from: ['The Boss', 'boss'], text: `${b} needs supplies. Write a shopping list with at least 6 lines in Notepad and save it.`, check: d => String(d.text || '').split('\n').filter(l => l.trim()).length >= 6 }; } },
+  { id: 'logo', app: 'paint', event: 'paint-save', pay: 3, make: r => { const b = r.pick(BIZ); return { title: 'Draw a logo', from: ['Art Department', 'art'], text: `Draw a logo for ${b} in Paintbox using at least 3 colors, then choose File, Save picture.`, check: d => d.colors >= 3 && d.filled >= 0.04 }; } },
+  { id: 'letter', app: 'write', event: 'write-save', pay: 4, make: r => { const p = r.pick(PEOPLE), b = r.pick(BIZ); return { title: 'Write a letter', from: p, text: `Write a thank-you letter from ${b} to ${p[0]} in the word processor. Make it at least 40 words, then save it.`, check: d => (d.words || String(d.text || '').split(/\s+/).filter(Boolean).length) >= 40 }; } },
+  { id: 'cal', app: 'calendar', event: 'calendar-add', pay: 2, make: r => { const m = r.int(1, 12), dd = r.int(1, 28), [a] = r.pick(WORDS), p = r.pick(PEOPLE); return { title: 'Schedule an event', from: p, text: `Put the ${a} on the Calendar for ${MONTHS[m - 1]} ${dd}.`, check: d => +d.month === m && +d.day === dd }; } },
+  { id: 'card', app: 'cardfile', event: 'cardfile-add', pay: 2, make: r => { const p = r.pick(PEOPLE); return { title: 'File a customer card', from: ['The Boss', 'boss'], text: `Add a Cardfile card for new customer ${p[0]}. Put their name on the card.`, check: d => lc((d.title || '') + ' ' + (d.text || '')).includes(lc(p[1])) }; } },
+  { id: 'jingle', app: 'music', event: 'music-save', pay: 3, make: r => { const b = r.pick(BIZ); return { title: 'Compose a jingle', from: ['Radio Ads Dept.', 'radio'], text: `Compose a radio jingle for ${b} in Music Maker with at least 12 notes, then save it.`, check: d => d.notes >= 12 }; } },
+  { id: 'site', app: 'pagebuilder', event: 'page-publish', pay: 5, make: r => { const b = r.pick(BIZ); return { title: 'Build a web page', from: ['Web Team', 'web'], text: `Publish a home page for ${b} with Home Page Builder. The page must mention "${b}".`, check: d => lc(d.text + ' ' + d.title).includes(lc(b.split(' ')[0])) }; } },
+  { id: 'code', app: 'basic', event: 'basic-run', pay: 4, make: r => { const n = r.int(3, 6); return { title: 'Write a program', from: ['Computer Lab', 'lab'], text: `Write a BASIC program at least ${n} lines long and RUN it.`, check: d => d.lines >= n }; } },
+  { id: 'sign', app: 'banner', event: 'banner-print', pay: 3, make: r => { const w = r.pick(['SALE', 'OPEN', 'WELCOME', 'PARTY', 'THANKS']), b = r.pick(BIZ); return { title: 'Print a sign', from: [b, 'shop'], text: `Print a sign or banner for ${b} that says ${w}.`, check: d => lc(d.text).includes(lc(w)) }; } },
+  { id: 'ad', app: 'moviemaker', event: 'movie-save', pay: 5, make: r => { const b = r.pick(BIZ); return { title: 'Animate a TV ad', from: ['TV Ads Dept.', 'tv'], text: `Make a short animated ad for ${b} in Movie Maker, at least 8 frames long, and save it.`, check: d => d.frames >= 8 }; } },
+  { id: 'type', app: 'critters', event: 'typing-done', pay: 3, make: r => { const w = r.pick([10, 12, 15]); return { title: 'Typing practice', from: ['Office Manager', 'office'], text: `Finish a typing lesson at ${w} words per minute or faster (Keyboard Critters or Type Rider).`, check: d => d.wpm >= w }; } },
+  { id: 'invoice', app: 'calc', event: 'calc-result', pay: 2, make: r => { const a = r.int(3, 12), c = r.pick([1.25, 2.5, 3.75, 4.99, 6.5]), t = Math.round(a * c * 100) / 100; return { title: 'Figure an invoice', from: r.pick(PEOPLE), text: `A customer bought ${a} items at $${c.toFixed(2)} each. Work out the total on the Calculator.`, check: d => Math.abs(+d.value - t) < 0.006 }; } },
+  { id: 'books', app: 'sheet', event: 'sheet-save', pay: 4, make: r => { const xs = Array.from({ length: 5 }, () => r.int(8, 60)), t = xs.reduce((a, b) => a + b, 0); return { title: 'Keep the books', from: ['Bookkeeping', 'books'], text: `Type this week's sales into Horizon Sheet (${xs.join(', ')}) in a column, add a =SUM formula for the total, and save.`, check: d => Object.values(d.cells || {}).some(c => /sum\(/i.test(c)) && Object.values(d.values || {}).some(v => +v === t) }; } },
+  { id: 'reply', app: 'mail', event: 'mail-send', pay: 3, mail: true, make: (r, id) => { const p = r.pick(PEOPLE), b = r.pick(BIZ); return { title: 'Answer a customer', from: p, text: `${p[0]} emailed ${b} a question. Open Mail, reply to the message and answer politely (at least a sentence).`, subject: 'Question about my order', body: `Hello,\n\nI ordered from ${b} last week. Can you tell me when it will be ready?\n\nThanks,\n${p[0]}`, check: d => d.replyTo === id && String(d.body || '').trim().length >= 20 }; } },
+  { id: 'email', app: 'mail', event: 'mail-send', pay: 3, mail: true, make: r => { const p = r.pick(PEOPLE), a = r.int(3, 9), c = r.pick([2, 4, 5]), t = a * c; return { title: 'Email a total', from: ['The Boss', 'boss'], text: `Email ${p[0]} (${p[1]}@prairienet.com) the total for ${a} boxes at $${c} each. Put the number in the message.`, subject: 'Please send the total', body: `Hi,\n\nPlease email ${p[0]} at ${p[1]}@prairienet.com the total for ${a} boxes at $${c} each.\n\nThanks!`, check: d => lc(d.to).includes(p[1]) && String(d.body || '').replace(/,/g, '').includes(String(t)) }; } },
+  { id: 'snap', app: 'photo', event: 'photo-save', pay: 4, make: r => { const s = r.pick(['giraffe', 'penguin', 'surfer', 'lighthouse', 'taxi', 'dog', 'kite', 'cow', 'rocket', 'astronaut']); return { title: 'Newspaper photo', from: ['Gazette Photo Desk', 'gazette'], text: `The Gazette needs a clear photo of a ${s}. Take one with Photo Studio and save it to the album.`, check: d => (d.subjects || []).includes(s) && d.quality >= 0.5 }; } },
+  { id: 'poster', app: 'kidart', event: 'art-save', pay: 3, make: r => { const b = r.pick(BIZ); return { title: 'Make a poster', from: [b, 'shop'], text: `Make a colorful poster for ${b} in Splatter Pad (at least 4 colors) and save it.`, check: d => d.colors >= 4 }; } }
+];
+function seeded(seed) { let s = 0; for (const ch of seed) s = (s * 31 + ch.charCodeAt(0)) >>> 0; const next = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; return { next, int: (a, b) => a + Math.floor(next() * (b - a + 1)), pick: a => a[Math.floor(next() * a.length)] }; }
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+const workGet = (k, d) => store.get('work:' + k, d), workSet = (k, v) => store.set('work:' + k, v);
+function todaysJobs() {
+  const key = today() + ':' + era.id, r = seeded(key), have = new Set(apps().map(a => a.id)), done = workGet('done:' + key, {});
+  const pool = JOBS.filter(j => have.has(j.app) && (!j.eras || j.eras.includes(era.id)) && !(j.id === 'memo' && era.id === '1985'));
+  const picked = []; const used = new Set();
+  while (picked.length < 3 && used.size < pool.length) { const j = r.pick(pool); if (used.has(j.id)) { used.add(j.id); continue; } used.add(j.id); if (picked.some(p => p.app === j.app) && pool.length > 4) continue; picked.push(j); }
+  return picked.map(j => {
+    const id = key + ':' + j.id, m = j.make(seeded(id), id), pay = Math.round(j.pay * rank().x * 100) / 100;
+    return { id, title: m.title, pay, app: j.app, event: j.event, done: !!done[id], instructions: m.text, from: { name: m.from[0], addr: m.from[1] + '@horizon-temps.com' }, mail: m.subject ? { subject: m.subject, body: m.body } : ((era.id === '1995' || era.id === '2000') ? { subject: 'New assignment: ' + m.title, body: m.text + '\n\nThanks,\n' + m.from[0] } : null), check: m.check };
+  });
+}
+const rank = () => { const n = workGet('jobsDone', 0); return RANKS.slice().reverse().find(x => n >= x.n); };
+function workTask(type, data) {
+  if (!booted) return;
+  const key = today() + ':' + era.id, done = workGet('done:' + key, {});
+  todaysJobs().forEach(j => {
+    if (j.done || j.event !== type) return;
+    let ok = false; try { ok = !!j.check(data); } catch (e) {}
+    if (!ok) return;
+    done[j.id] = true; workSet('done:' + key, done);
+    const un = workGet('unpaid', { jobs: [], wage: 0, secs: 0, bonus: 0 }); un.jobs.push({ t: j.title, pay: j.pay, y: era.year }); workSet('unpaid', un);
+    workSet('jobsDone', workGet('jobsDone', 0) + 1);
+    sfx.tada(); toast(`Job done: ${j.title}! +${money(j.pay)} on your next paycheck.`);
+    if (todaysJobs().every(x => x.done)) workDayDone();
+    if (wins.work && wins.work.refresh) wins.work.refresh();
+  });
+}
+// Finishing all of a year's jobs for the day builds a streak: $1 extra per day in a row (up to $5).
+function workDayDone() {
+  const st = workGet('streak', { last: '', n: 0 }), t = today();
+  if (st.last === t) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  st.n = st.last === y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate() ? st.n + 1 : 1; st.last = t; workSet('streak', st);
+  const bonus = Math.min(5, st.n), un = workGet('unpaid', { jobs: [], wage: 0, secs: 0, bonus: 0 }); un.bonus = (un.bonus || 0) + bonus; workSet('unpaid', un);
+  setTimeout(() => toast(`All of today's jobs done! ${st.n}-day streak: +${money(bonus)} bonus.`), 1500);
+}
+// Time clock: while clocked in, each active minute (mouse, keys or taps in the last minute; no screen saver) earns that year's minimum wage.
+let lastInput = Date.now();
+['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true, capture: true }));
+document.addEventListener('pointermove', () => { lastInput = Date.now(); }, { passive: true });
+setInterval(() => {
+  const c = workGet('clock', { on: false });
+  if (!c.on || !booted || saverOn || document.hidden || Date.now() - lastInput > 60000) return;
+  const t = today(), day = workGet('hours', { day: t, secs: 0 }); if (day.day !== t) { day.day = t; day.secs = 0; }
+  if (day.secs >= WAGE_HOURS_CAP * 3600) { if (!c.capped) { c.capped = true; workSet('clock', c); toast(`That's a full ${WAGE_HOURS_CAP}-hour shift today. Great work! The time clock stops paying until tomorrow.`); } return; }
+  const ws = 15 * TIME_SPEED; day.secs += ws; workSet('hours', day);
+  const un = workGet('unpaid', { jobs: [], wage: 0, secs: 0, bonus: 0 }); un.secs = (un.secs || 0) + ws; un.wage = (un.wage || 0) + (MIN_WAGE[era.id] || 4) * ws / 3600; workSet('unpaid', un);
+  if (wins.work && wins.work.refresh && wins.work.clockOnly) wins.work.clockOnly();
+}, 15000);
+const fmtHM = s => `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}`;
+function payday() {
+  const un = workGet('unpaid', { jobs: [], wage: 0, secs: 0, bonus: 0 });
+  const wage = Math.floor((un.wage || 0) * 100) / 100, jobs = un.jobs.reduce((a, j) => a + j.pay, 0), total = Math.round((wage + jobs + (un.bonus || 0)) * 100) / 100;
+  if (total <= 0) { msgBox('Payday', 'Nothing to collect yet. Finish a job or clock in and work a while first!'); return; }
+  setWallet(wallet() + total); workSet('earned', workGet('earned', 0) + total);
+  workSet('unpaid', { jobs: [], wage: Math.max(0, (un.wage || 0) - wage), secs: 0, bonus: 0 });
+  const row = (label, amt) => label.padEnd(30, '.') + money(amt).padStart(9);
+  const out = [`HORIZON TEMP AGENCY - PAY STUB`, `Employee: ${store.get('user', 'kidsurfer')}  (${rank().name})`, ''];
+  un.jobs.forEach(j => out.push(row(`${j.t} (${j.y}) `, j.pay)));
+  if (un.secs) out.push(row(`Time clock ${fmtHM(un.secs)} hrs `, wage));
+  if (un.bonus) out.push(row('Streak bonus ', un.bonus));
+  out.push('', row('TOTAL PAID ', total), '', 'Added to your money. Spend it wisely!');
+  sfx.tada();
+  openWin({ id: 'paystub', title: 'Paycheck', icon: 'work', w: 420, center: true, fixed: true, noMin: true, autoH: true, build(W) {
+    W.body.innerHTML = '<div class="wk-stub"><pre></pre><div class="btns"><button class="btn">OK</button></div></div>';
+    W.body.querySelector('pre').textContent = out.join('\n'); W.body.querySelector('button').onclick = () => closeWin(W);
+  }});
+  if (wins.store && wins.store.refresh) wins.store.refresh();
+  if (wins.work && wins.work.refresh) wins.work.refresh();
+}
+function openWork() {
+  return openWin({ id: 'work', title: era.year < 1995 ? 'Job Board' : 'Job Center', icon: 'work', w: 620, h: 500, build(W) {
+    W.refresh = () => {
+      const jobs = todaysJobs(), c = workGet('clock', { on: false }), un = workGet('unpaid', { jobs: [], wage: 0, secs: 0, bonus: 0 }), st = workGet('streak', { last: '', n: 0 }), hrs = workGet('hours', { day: today(), secs: 0 }), rk = rank(), nx = RANKS.find(x => x.n > workGet('jobsDone', 0));
+      const owed = Math.floor((un.wage || 0) * 100) / 100 + un.jobs.reduce((a, j) => a + j.pay, 0) + (un.bonus || 0);
+      W.body.innerHTML = `<div class="wk"><div class="wk-hd"><div><b>HORIZON TEMP AGENCY</b><small>${esc(store.get('user', 'kidsurfer'))} · ${rk.name}${nx ? ` (${nx.n - workGet('jobsDone', 0)} more jobs to ${nx.name})` : ''} · Job streak: ${st.n} · Visit streak: ${store.get('visitStreak', { n: 0 }).n} day${store.get('visitStreak', { n: 0 }).n === 1 ? '' : 's'}</small></div><div class="wk-owed">On your next paycheck<b>${money(owed)}</b><button class="btn" data-pay>Collect paycheck</button></div></div>
+        <h4>Today's assignments (${era.year})</h4>${jobs.length ? jobs.map(j => `<div class="wk-job${j.done ? ' done' : ''}" data-app="${j.app}"><div><b>${esc(j.title)}</b> <small>from ${esc(j.from.name)}</small><p>${esc(j.instructions)}</p></div><div class="wk-pay">${money(j.pay)}${j.done ? '<span>DONE</span>' : `<button class="btn" data-open>${j.app === 'mail' ? 'Open Mail' : 'Start'}</button>`}</div></div>`).join('') : '<p>No jobs today on this computer. Try another year!</p>'}
+        <p class="wk-note">New jobs every day in every year. Finish all three for a streak bonus. Each year has its own assignments.</p>
+        <h4>Time clock</h4><div class="wk-clock"><span class="wk-lamp${c.on ? ' on' : ''}"></span><div><b data-clk>${c.on ? 'Clocked in' : 'Clocked out'}</b><small>Pay: ${money(MIN_WAGE[era.id] || 4)} an hour, the real US minimum wage in ${era.year}. Time counts only while you're using the computer, and it flies: 1 real minute = ${TIME_SPEED} work minutes, so an ${WAGE_HOURS_CAP}-hour shift takes ${WAGE_HOURS_CAP * 60 / TIME_SPEED} real minutes (one paid shift a day).</small><small data-hrs>Paid time today: ${fmtHM(hrs.day === today() ? hrs.secs : 0)} of ${WAGE_HOURS_CAP}:00</small></div><button class="btn" data-clock>${c.on ? 'Clock out' : 'Clock in'}</button></div>
+        <p class="wk-note">Total earned working: ${money(workGet('earned', 0))} · Jobs finished: ${workGet('jobsDone', 0)}</p></div>`;
+      W.body.querySelector('[data-pay]').onclick = payday;
+      W.body.querySelector('[data-clock]').onclick = () => { const k = workGet('clock', { on: false }); k.on = !k.on; k.capped = false; workSet('clock', k); sfx.click(); toast(k.on ? `Clocked in at ${money(MIN_WAGE[era.id] || 4)} an hour.` : 'Clocked out. Collect your paycheck any time.'); W.refresh(); };
+      $$('[data-open]', W.body).forEach(b => b.onclick = () => openApp(b.closest('[data-app]').dataset.app));
+    };
+    W.clockOnly = () => { const h = W.body.querySelector('[data-hrs]'), hrs = workGet('hours', { day: today(), secs: 0 }); if (h) h.textContent = `Paid time today: ${fmtHM(hrs.day === today() ? hrs.secs : 0)} of ${WAGE_HOURS_CAP}:00`; };
+    W.refresh();
+  }});
 }
 
 /* play money */
@@ -624,7 +755,11 @@ function allowance() {
   if (store.get('allowanceDay', '') === day || tester()) return;
   const first = store.get('allowanceDay', '') === '';
   store.set('allowanceDay', day);
-  if (!first) { setWallet(wallet() + ALLOWANCE); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance. Spend it at the Software Store!`), 1500); }
+  // Showing up every day builds a visit streak: +$1 per day in a row on top of the allowance (up to +$7).
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const vs = store.get('visitStreak', { last: '', n: 0 }); vs.n = vs.last === y.toDateString() ? vs.n + 1 : 1; vs.last = day; store.set('visitStreak', vs);
+  const extra = first ? 0 : Math.min(7, vs.n - 1);
+  if (!first) { setWallet(wallet() + ALLOWANCE + extra); setTimeout(() => toast(`+${money(ALLOWANCE)} allowance${extra ? ` and +${money(extra)} for a ${vs.n}-day visit streak` : ''}. Spend it at the Software Store!`), 1500); }
 }
 // Read text aloud for young players (Web Speech API). Silent if unsupported or the volume is at zero.
 function say(text, o = {}) {
@@ -699,7 +834,7 @@ function toggleCrt() { settings.crt = !settings.crt; screen.classList.toggle('cr
 /* Start-menu desktop (1995 and later) */
 function buildStartShell() {
   const grid = document.createElement('div'); grid.id = 'deskicons'; grid.setAttribute('role', 'list');
-  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store', 'passport', 'help'];
+  const desk = ['files', ...era.apps.filter(id => APP_DEFS[id]().cat === 'main' && id !== 'cp'), 'store', 'work', 'passport', 'help'];
   desk.forEach(id => grid.appendChild(iconButton(findApp(id), grid)));
   grid.appendChild(iconButton({ label: 'Games', icon: 'folder', open: () => openFolder('game') }, grid));
   layer.prepend(grid);
@@ -792,7 +927,7 @@ function openNotepad(name) {
     W.body.innerHTML = '<div class="np"><textarea spellcheck="false" aria-label="Text"></textarea></div>';
     const ta = W.body.querySelector('textarea');
     ta.value = custom ? store.get('mynotes', 'Type anything here. Choose File, then Save, and it will still be here next time.\n\n') : era.files[name];
-    function save() { store.set('mynotes', ta.value); sfx.seek(6); msgBox('Notepad', 'MYNOTES.TXT has been saved to drive C:.'); }
+    function save() { store.set('mynotes', ta.value); taskEvent('note-save', { text: ta.value }); sfx.seek(6); msgBox('Notepad', 'MYNOTES.TXT has been saved to drive C:.'); }
     ta.addEventListener('keydown', e => { if (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') sfx.key(); if ((e.ctrlKey || e.metaKey) && e.key === 's' && custom) { e.preventDefault(); save(); } });
   }});
 }
@@ -1398,6 +1533,7 @@ const CORE_HELP = {
   store: 'Buy new games with your play money.',
   files: 'Look around the hard disk, including files you download.',
   help: 'This guide.',
+  work: 'Do daily jobs and clock in for an hourly wage. Collect your paycheck to earn money.',
   passport: 'Collect a stamp for each year\'s big moments. Fill it for a bonus.',
   capsule: 'Write a message and bury it. It opens when you visit a later year.'
 };
@@ -1428,7 +1564,7 @@ function openHelp(page) {
       + `<h4>Turning off</h4>` + li([`${dos ? 'Type <code>OFF</code>' : start ? 'Choose <b>Start, Shut Down</b>' : 'Click <b>Shut Down</b>'} to turn the computer off. Everything is saved.`, 'Tired of waiting at startup? The <b>Skip the startup</b> button jumps straight to the desktop.'])
     });
     out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
-      <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
+      <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back, plus $1 for each day in a row (up to $7 extra).`, `<b>Work:</b> open the ${era.year < 1995 ? 'Job Board' : 'Job Center'}${dos ? ' (type <code>JOBS</code>)' : ''} for 3 daily jobs, and clock in to earn the ${Y} minimum wage (${money(MIN_WAGE[era.id] || 4)} an hour) while you use the computer. Collect your paycheck there.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
       + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
       + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To move your stuff to another computer or browser: <b>Control Panel, Backup &amp; restore</b>.'])
     });
@@ -1783,10 +1919,18 @@ function openPaint() {
       eraser: '<svg viewBox="0 0 18 18"><path d="M2 12l7-7 6 6-4 4H6z" fill="#ffc0cb" stroke="#000"/></svg>',
       rect: '<svg viewBox="0 0 18 18"><rect x="3" y="4" width="12" height="10" fill="none" stroke="#000" stroke-width="2"/></svg>'
     };
-    menubar(W, [{ label: 'File', items: [{ label: 'New picture', fn: () => { g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); } }, { label: 'Exit', fn: () => closeWin(W) }] }]);
+    menubar(W, [{ label: 'File', items: [{ label: 'New picture', fn: () => { g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); } }, { label: 'Save picture', fn: () => savePic() }, { label: 'Exit', fn: () => closeWin(W) }] }]);
+    // Save keeps the last picture (reopened next time) and reports it to the Work Center.
+    function savePic() {
+      const d = g.getImageData(0, 0, cv.width, cv.height).data, cols = new Set(); let ink = 0, n = 0;
+      for (let i = 0; i < d.length; i += 16) { n++; const k = d[i] + ',' + d[i + 1] + ',' + d[i + 2]; if (k !== '255,255,255') { ink++; cols.add(k); } }
+      try { store.set('paint:last', cv.toDataURL('image/png')); } catch (e) {}
+      taskEvent('paint-save', { colors: cols.size, filled: ink / n }); sfx.seek(6); setTitle(W, 'Paintbox - PICTURE.BMP'); toast('Saved PICTURE.BMP');
+    }
     W.body.innerHTML = `<div class="paint"><div class="main"><div class="tools">${Object.entries(TOOLS).map(([k, s]) => `<button class="btn" data-t="${k}" title="${k}" aria-label="${k}">${s}</button>`).join('')}<label style="grid-column:span 2;font-size:11px;margin-top:6px">Size<br><input type="range" min="1" max="4" value="2" data-size style="width:60px"></label></div><div class="well sunken"><canvas width="560" height="360" aria-label="Drawing canvas"></canvas></div></div><div class="pal"><div class="cur"></div><div class="sw">${VGA.map(c => `<button style="background:${c}" data-c="${c}" aria-label="Color ${c}"></button>`).join('')}</div></div></div>`;
     const cv = W.body.querySelector('canvas'), g = cv.getContext('2d'), cur = W.body.querySelector('.cur'), sizeEl = W.body.querySelector('[data-size]');
     g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    const lastPic = store.get('paint:last', ''); if (lastPic) { const im = new Image(); im.onload = () => g.drawImage(im, 0, 0); im.src = lastPic; }
     let tool = 'brush', color = '#000000', drawing = false, last = null, sprayT = null, startPt = null, snap = null;
     const setTool = t => { tool = t; $$('[data-t]', W.body).forEach(b => b.classList.toggle('down', b.dataset.t === t)); };
     const setColor = c => { color = c; cur.style.background = c; };
@@ -2328,6 +2472,7 @@ function dosRun(line) {
   MENU         program menu          CATALOG     the mail-order software catalog
   EDIT         write notes           CONTROL     settings (sound, screen color)
   GUIDE        the quick help guide: how everything works, money, programs
+  JOBS         the job board: daily jobs and the time clock earn money
   COLOR        change screen color   VER, DATE, TIME, MEM   system info
   1990  1995  2000   travel to another year          OFF    turn off
 Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES)[0] ? Object.keys(T.GAMES)[0].replace('.EXE', '') : 'CALC'}.`),
@@ -2364,6 +2509,7 @@ Programs: type a name from DIR PROGRAMS or DIR GAMES, like ${Object.keys(T.GAMES
     MENU: () => dosMenu(),
     CATALOG: () => openStore(),
     GUIDE: () => openHelp(),
+    JOBS: () => openWork(),
     CONTROL: () => openSettings(),
     COLOR: () => { const i = era.walls.findIndex(w => w[0] === eraCfg().wall); eraCfg().wall = era.walls[(i + 1) % era.walls.length][0]; saveSettings(); dos.el.style.setProperty('--phos', era.walls[(i + 1) % era.walls.length][1]); },
     OFF: () => askShutdown(), SHUTDOWN: () => askShutdown(), EXIT: () => askShutdown(),

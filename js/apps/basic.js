@@ -1095,6 +1095,7 @@
       M.inProg = false;
       if (!completed && secs < 1) return;
       if (M.runLines >= 2) api.stamp('basic-run');
+      if (M.runLines >= 1) api.task('basic-run', { lines: M.runLines, source: M.prog.map(([n, x]) => n + ' ' + x).join('\n') });
       if (M.runLines >= 1 && !api.load('earned', false)) {
         api.save('earned', true);
         const got = api.earn(3, 'running your first BASIC program');

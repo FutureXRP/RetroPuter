@@ -791,6 +791,7 @@
         }
         bar.style.width = '100%';
         api.save('pub', { slug: slug(), p: clean(P) }); api.stamp('home-page');
+        const cp = clean(P); api.task('page-publish', { title: cp.t, blocks: cp.b.length, text: cp.b.map(b => (b.k === 'ab' ? [b.n, b.a, b.w, b.l, b.x] : [b.h].concat(b.x)).map(v => v && typeof v === 'object' ? v.t : v).filter(v => typeof v === 'string' && v).join(' ')).filter(Boolean).join('\n') });
         ov.remove(); busy = false;
         api.sfx.tada();
         const r = await api.msgBox('You\'re on the Web!', `Your page is published! Anyone on the Web can visit it at:\n\n${myUrl()}\n\nPress Open NetVoyager to go there now, or find it in the CyberBurbs member directory at ${HOST}`, ['Open NetVoyager', 'OK']);

@@ -380,6 +380,7 @@
       L.res = { acc, wpm, stars, first, earned: first ? dailyEarn(api, 5, 'finishing a typing lesson') : 0, trophies: got.filter(Boolean) };
       L.phase = 'done'; view = 'done';
       api.sfx.tada();
+      api.task('typing-done', { wpm, accuracy: acc, app: 'critters' });
       const nw = LESSONS[L.i];
       say(`You did it! ${stars === 3 ? 'Three stars!' : stars === 2 ? 'Two stars!' : 'One star!'} ${first ? `${CRIT[nw[0]][0]} and ${CRIT[nw[1]][0]} stickers go on your shelf!` : 'Super practice!'}`);
       render();

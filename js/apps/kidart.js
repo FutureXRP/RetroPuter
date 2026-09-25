@@ -856,6 +856,9 @@
       pics = pics.map(p => p.k === key ? { k: key, t: Date.now() } : p);
       api.save('pics', pics); curKey = key; dirty = false; saveWip();
       SND.saved();
+      { const px = ctx.getImageData(0, 0, CW, CH).data, seen = {}; let ink = 0, n = 0; // every 2nd pixel; ignore white and tiny edge blends
+        for (let y = 0; y < CH; y += 2) for (let x = 0; x < CW; x += 2) { const i = (y * CW + x) * 4, c = px[i] << 16 | px[i + 1] << 8 | px[i + 2]; n++; if (c !== 0xffffff) { ink++; seen[c] = (seen[c] || 0) + 1; } }
+        api.task('art-save', { colors: Object.values(seen).filter(v => v >= 8).length, filled: ink / n }); }
       cvWrap.classList.remove('spl-flash'); void cvWrap.offsetWidth; cvWrap.classList.add('spl-flash');
       flyTo(url, $('.spl-galb'));
       tell(api.pick(['Saved! What a great picture!', 'Saved! You are a real artist!', 'Saved! That one goes on the wall!']));

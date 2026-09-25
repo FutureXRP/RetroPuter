@@ -772,3 +772,28 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .co-ok{color:#006000;font-weight:700}
 .co-short{color:#b00000}
 .co-open{margin-top:3px;font-size:11px;padding:1px 6px}
+
+/* ---- Work Center (Job Board / Job Center) ---- */
+.wk{padding:8px 10px;background:#fff;min-height:100%;color:#000}
+.wk-hd{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#000080;color:#fff;padding:8px 10px;flex-wrap:wrap}
+.wk-hd b{letter-spacing:2px}.wk-hd small{display:block;color:#c0ffff}
+.wk-owed{text-align:right}.wk-owed b{display:block;font-size:20px;color:#ffff80}
+.wk h4{margin:12px 0 4px;color:#800000;border-bottom:1px solid #c0c0c0}
+.wk-job{display:flex;gap:10px;justify-content:space-between;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;padding:6px 8px;margin:6px 0;background:#f4f4f4}
+.wk-job p{margin:3px 0 0}.wk-job small{color:#555}
+.wk-job.done{background:#e8f6e8;opacity:.85}
+.wk-pay{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:700;white-space:nowrap}
+.wk-pay span{color:#006000}
+.wk-clock{display:flex;align-items:center;gap:10px}
+.wk-clock > div{flex:1}.wk-clock small{display:block;color:#444}
+.wk-lamp{width:14px;height:14px;border-radius:50%;background:#600;border:1px solid #000;flex:none}
+.wk-lamp.on{background:#0f0;box-shadow:0 0 6px #0f0}
+.wk-note{font-size:12px;color:#555;margin:4px 0}
+.era-1985 .wk,.era-1985 .wk-job,.era-1985 .wk-hd{background:#000;color:var(--phos,#33ff66);border-color:var(--phos,#33ff66)}
+.era-1985 .wk-hd small,.era-1985 .wk-owed b,.era-1985 .wk h4,.era-1985 .wk-job small,.era-1985 .wk-note,.era-1985 .wk-clock small,.era-1985 .wk-pay span{color:var(--phos,#33ff66)}
+.era-1985 .wk-job{border:1px solid var(--phos,#33ff66)}
+.wk-owed .btn{color:#000}
+.wk-stub{padding:10px;background:#fffbe8}
+.wk-stub pre{margin:0 0 10px;font:13px/1.45 "Courier New",monospace;color:#000;white-space:pre;overflow-x:auto;border:1px dashed #a08040;padding:8px;background:#fff}
+.wk-stub .btns{text-align:center}
+.era-1985 .wk-stub,.era-1985 .wk-stub pre{background:#000;color:var(--phos,#33ff66);border-color:var(--phos,#33ff66);font-family:var(--dos)}
