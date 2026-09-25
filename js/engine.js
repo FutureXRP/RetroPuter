@@ -45,20 +45,39 @@ function fmtBps(v) {
 }
 
 /* ---------- audio ---------- */
-let ac = null, master = null, noiseBuf = null;
+let ac = null, master = null, noiseBuf = null, unlockedCtx = null;
+// iPhone/iPad: play sound like a media app, so the ring/silent switch doesn't silence the whole site (Safari 16.4+).
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
 function audio() {
+  if (ac && ac.state === 'closed') ac = null;
   if (!ac) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
-    ac = new C();
+    try { ac = new C(); } catch (e) { return null; }
     master = ac.createGain(); master.gain.value = settings.vol; master.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (ac.state === 'suspended') ac.resume();
+  // 'suspended' (autoplay rules, background tab) and 'interrupted' (iOS: calls, Siri, lock screen) both need a resume.
+  if (ac.state !== 'running') { const r = ac.resume && ac.resume(); if (r && r.catch) r.catch(() => {}); }
   return ac;
 }
+// Browsers only allow sound to start during a tap, click or key press, and most of our sounds play a moment later
+// (boot, timers). So every user gesture re-arms audio, and the first one per context plays a silent blip (iOS unlock).
+function unlockAudio() {
+  const a = audio(); if (!a) return;
+  if (unlockedCtx !== a || a.state !== 'running') {
+    try { const src = a.createBufferSource(); src.buffer = a.createBuffer(1, 1, a.sampleRate); src.connect(a.destination); src.start(0); } catch (e) {}
+    unlockedCtx = a;
+  }
+}
+['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'].forEach(ev => document.addEventListener(ev, () => { if (ac || ev !== 'pointerup') unlockAudio(); }, { capture: true, passive: true }));
+// Coming back to the tab or app: try to resume right away (works where the page was already allowed to play).
+const wakeAudio = () => { if (ac && !document.hidden && ac.state !== 'running') { const r = ac.resume(); if (r && r.catch) r.catch(() => {}); } };
+document.addEventListener('visibilitychange', wakeAudio); window.addEventListener('pageshow', wakeAudio); window.addEventListener('focus', wakeAudio);
+// Don't queue one-shot sounds while the page is hidden or iOS has audio interrupted: they'd all fire at once later.
+const audioBlocked = a => document.hidden || a.state === 'interrupted';
 function env(g, t, dur, v, o) {
   g.gain.setValueAtTime(0.0001, t);
   if (o.decay) {
@@ -72,7 +91,7 @@ function env(g, t, dur, v, o) {
   }
 }
 function tone(f, dur, o = {}) {
-  const a = audio(); if (!a) return;
+  const a = audio(); if (!a || (!o.dest && audioBlocked(a))) return;
   const t = a.currentTime + (o.at || 0);
   const osc = a.createOscillator(); osc.type = o.type || 'square';
   osc.frequency.setValueAtTime(f, t);
@@ -83,7 +102,7 @@ function tone(f, dur, o = {}) {
   return osc;
 }
 function noise(dur, o = {}) {
-  const a = audio(); if (!a) return;
+  const a = audio(); if (!a || (!o.dest && audioBlocked(a))) return;
   const t = a.currentTime + (o.at || 0);
   const src = a.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
   const f = a.createBiquadFilter(); f.type = o.ft || 'bandpass'; f.frequency.value = o.f || 2000; f.Q.value = o.q || 1;
@@ -769,6 +788,7 @@ function say(text, o = {}) {
   try {
     if (!window.speechSynthesis || settings.vol <= 0) return false;
     if (o.interrupt !== false) speechSynthesis.cancel();
+    try { speechSynthesis.resume(); } catch (e) {} // Chrome can leave speech stuck in a paused state
     const u = new SpeechSynthesisUtterance(String(text));
     u.rate = o.rate || 1; u.pitch = o.pitch || 1.1; u.volume = Math.min(1, settings.vol * 1.4);
     speechSynthesis.speak(u); return true;
@@ -2925,6 +2945,7 @@ if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
   launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
   own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,
   desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(true); } },
+  audio: () => (ac ? ac.state : 'none'), audioSuspend: () => ac && ac.suspend(),
   era: () => era.id, switchEra, connect: () => { net.connected = true; refreshTray(); Object.values(wins).forEach(W => W.onNet && W.onNet()); }
 };
 
