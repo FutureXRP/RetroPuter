@@ -550,6 +550,9 @@ function appApi(p, W) {
     setTitle: t => setTitle(W, t), close: () => closeWin(W),
     playMusic: song => playMusic(song, p.id), stopMusic: () => stopMusic(p.id),
     earn: (amt, why) => earn(amt, why),
+    // In-app purchases with play money: always asks first. Resolves true if bought (free with a coupon), false otherwise.
+    spend: (amt, what) => spendMoney(p, amt, what),
+    wallet: () => wallet(),
     say: (text, o = {}) => say(text, o),
     dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
@@ -762,6 +765,17 @@ function installAll() {
   store.set('owned', [...new Set([...owned(), ...ids])]); store.set('pending', []);
   refreshShell(); if (wins.store && wins.store.refresh) wins.store.refresh();
   toast(`Installed all ${ids.length} store games (tester mode).`);
+}
+async function spendMoney(p, amt, what) {
+  amt = Math.round(Math.max(0, +amt || 0) * 100) / 100; what = String(what || 'this');
+  const free = tester() || allAccess();
+  if (!free && wallet() < amt) { await msgBox('Not enough money', `${what} costs ${money(amt)}, and you have ${money(wallet())}.\n\nDo a job at the ${era.year < 1995 ? 'Job Board' : 'Job Center'}, win a game, or come back tomorrow for your allowance.`, ['OK'], 'warn'); return false; }
+  const r = await msgBox('Confirm purchase', free ? `Get ${what}? Your coupon makes it free.` : `Buy ${what} for ${money(amt)}?\n\nYou'll have ${money(wallet() - amt)} left.`, [free ? 'Get it' : 'Buy it', 'Cancel'], 'info');
+  if (r !== 'Buy it' && r !== 'Get it') return false;
+  if (!free) setWallet(wallet() - amt);
+  sfx.tada(); toast(free ? `${what} added (coupon).` : `Bought ${what} for ${money(amt)}.`);
+  if (wins.store && wins.store.refresh) wins.store.refresh();
+  return true;
 }
 function earn(amt, why) {
   const day = new Date().toDateString(), log = store.get('earnLog', { day, n: 0 });
@@ -1631,7 +1645,7 @@ function openHelp(page) {
     });
     out.push({ t: 'Money: earn it and spend it', h: `<p class="qh-big">You have <b>${tester() ? 'unlimited money (tester mode)' : money(wallet())}</b> of play money.</p><p>It's pretend money. Nothing on RetroPuter ever costs real money.</p>
       <h4>Earn money</h4>` + li(['<b>Win games.</b> Most wins pay $2 to $10 (Mines, Worm, card games, quizzes, learning games and more).', `<b>Allowance:</b> ${money(ALLOWANCE)} every new day you come back, plus $1 for each day in a row (up to $7 extra).`, `<b>Work:</b> open the ${era.year < 1995 ? 'Job Board' : 'Job Center'}${dos ? ' (type <code>JOBS</code>)' : ''} for 3 daily jobs, and clock in to earn the ${Y} minimum wage (${money(MIN_WAGE[era.id] || 4)} an hour) while you use the computer. Collect your paycheck there.`, `You can earn up to ${money(DAILY_EARN_CAP)} a day from games. Come back tomorrow for more.`, `<b>Time Passport:</b> collect all ${STAMPS.length} stamps from 1985 to 2000 for a ${money(PASSPORT_BONUS)} bonus. Open the Time Passport to see what\'s left.`])
-      + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.'])
+      + `<h4>Spend money</h4>` + li([`Open the <b>${esc(S.name)}</b> ${dos ? '(type <code>CATALOG</code>)' : '(the Software Store icon' + (start ? ', or Games, Get more games' : '') + ')'} and pick a game.`, `Click <b>Buy</b>. The game installs ${Y < 1995 ? 'from floppy disks' : Y < 2000 ? 'from a CD-ROM' : 'from a CD or a download'}, then it's yours to keep.`, 'Games work in the year they came out and every year after. Older years can\'t run newer games.', ...(findApp('moviemaker') ? ['Some programs sell extras too: <b>Movie Maker Extras</b> has scene and prop packs. They always ask before charging.'] : [])])
       + `<h4>Saving</h4>` + li(['Everything saves automatically in this web browser. There\'s no login.', 'To keep it safe or move it to another computer or phone (no account needed): <b>Control Panel, Backup &amp; Restore, Save to file</b>, then <b>Load from file</b> on the other device.'])
     });
     const free = mine.filter(a => !(PLUGINS[a.id] && PLUGINS[a.id].kind === 'store'));

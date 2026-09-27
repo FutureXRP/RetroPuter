@@ -50,6 +50,7 @@ Add a `<script src="js/apps/NAME.js"></script>` line to `index.html` before `js/
 - `api.say(text, { rate, pitch, interrupt })`: read text aloud with the browser's speech voice (for pre-readers). Returns false if unavailable or muted, so always show the text on screen too.
 - `api.dial(number, onStatus, profile)`: play a real modem call (`profile` is `'v22'` for 300-2,400 bps). Returns `{ done: Promise<boolean>, cancel() }`. For programs that manage their own connection, like a 1985 terminal.
 - `api.user`: the player's user name.
+- `api.spend(dollars, 'what')`: in-app purchase with play money. Always shows a confirm dialog; resolves `true` if bought (free for coupon holders), `false` if cancelled or not enough money. `api.wallet()` returns the balance. Remember purchases with `api.save`.
 - `api.stamp(id)`: award a Time Traveler Passport stamp (see `STAMPS` in engine.js). Safe to call repeatedly.
 - Helpers: `api.esc`, `api.sleep`, `api.pick`, `api.$`, `api.$$`.
 
