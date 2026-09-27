@@ -550,6 +550,9 @@ function appApi(p, W) {
     setTitle: t => setTitle(W, t), close: () => closeWin(W),
     playMusic: song => playMusic(song, p.id), stopMusic: () => stopMusic(p.id),
     earn: (amt, why) => earn(amt, why),
+    // In-app purchases with play money: always asks first. Resolves true if bought (free with a coupon), false otherwise.
+    spend: (amt, what) => spendMoney(p, amt, what),
+    wallet: () => wallet(),
     say: (text, o = {}) => say(text, o),
     dial: (number, onStatus, profile = 'v22') => modemCall(String(number).replace(/[^0-9*#]/g, ''), onStatus, profile),
     online: () => net.connected, kbps: () => net.connected ? rateKB() : 0,
@@ -762,6 +765,17 @@ function installAll() {
   store.set('owned', [...new Set([...owned(), ...ids])]); store.set('pending', []);
   refreshShell(); if (wins.store && wins.store.refresh) wins.store.refresh();
   toast(`Installed all ${ids.length} store games (tester mode).`);
+}
+async function spendMoney(p, amt, what) {
+  amt = Math.round(Math.max(0, +amt || 0) * 100) / 100; what = String(what || 'this');
+  const free = tester() || allAccess();
+  if (!free && wallet() < amt) { await msgBox('Not enough money', `${what} costs ${money(amt)}, and you have ${money(wallet())}.\n\nDo a job at the ${era.year < 1995 ? 'Job Board' : 'Job Center'}, win a game, or come back tomorrow for your allowance.`, ['OK'], 'warn'); return false; }
+  const r = await msgBox('Confirm purchase', free ? `Get ${what}? Your coupon makes it free.` : `Buy ${what} for ${money(amt)}?\n\nYou'll have ${money(wallet() - amt)} left.`, [free ? 'Get it' : 'Buy it', 'Cancel'], 'info');
+  if (r !== 'Buy it' && r !== 'Get it') return false;
+  if (!free) setWallet(wallet() - amt);
+  sfx.tada(); toast(free ? `${what} added (coupon).` : `Bought ${what} for ${money(amt)}.`);
+  if (wins.store && wins.store.refresh) wins.store.refresh();
+  return true;
 }
 function earn(amt, why) {
   const day = new Date().toDateString(), log = store.get('earnLog', { day, n: 0 });
