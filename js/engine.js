@@ -18,7 +18,8 @@ let era = null;
 // The 'r1990:' prefix predates the other years; it's kept so saved notes and scores survive.
 const store = {
   get(k, d) { try { const v = localStorage.getItem('r1990:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('r1990:' + k, JSON.stringify(v)); } catch (e) {} }
+  // Returns false when the browser's storage is full, so callers can tell the player instead of losing work silently.
+  set(k, v) { try { localStorage.setItem('r1990:' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 // Per-year keys. 1990 keeps its original unprefixed keys.
 const ek = k => era.id === '1990' ? k : era.id + ':' + k;
