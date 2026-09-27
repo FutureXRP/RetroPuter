@@ -46,7 +46,7 @@
     ['boing', 'Boing'], ['whoosh', 'Whoosh'], ['drum', 'Drum roll'], ['laugh', 'Laugh'], ['pop', 'Pop'], ['ding', 'Ding'], ['splash', 'Splash'], ['zap', 'Zap'], ['honk', 'Honk'],
     ['jingle', 'Sleigh bells', 'holiday'], ['ooo', 'Friendly ghost', 'spooky'], ['fanfare', 'Fanfare', 'adventure'], ['roar', 'Dino roar', 'dino'], ['beam', 'UFO beam', 'space'],
     ['whistle', 'Whistle', 'sports'], ['bubbles', 'Bubbles', 'sea'], ['magic', 'Magic sparkle', 'fantasy']];
-  const MAXF = 60, MAXM = 10, MAXFIG = 3, MAXPROP = 12;
+  const MAXF = 300, MAXM = 10, MAXFIG = 3, MAXPROP = 12;
   const BUBF = '8px "Comic Sans MS","Chalkboard SE",cursive';
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -2140,7 +2140,10 @@
         dirty = true; setTitle();
         clearTimeout(saveT); saveT = setTimeout(saveDraft, 700);
       }
-      function saveDraft() { clearTimeout(saveT); try { api.save('draft', { n: name, m: pack(movie), at: cur, d: dirty ? 1 : 0 }); } catch (e) { /* storage full */ } }
+      function saveDraft() { clearTimeout(saveT); let ok = false; try { ok = api.save('draft', { n: name, m: pack(movie), at: cur, d: dirty ? 1 : 0 }) !== false; } catch (e) { ok = false; }
+        // Autosave failing means storage is full: warn once so the player can save or free room before losing work.
+        if (!ok && !draftWarned) { draftWarned = true; api.msgBox('Movie Maker', 'The disk is getting full, so autosave stopped working.\n\nSave your movie now (File > Save). If that fails too, delete an old movie or save everything to a file in Control Panel > Backup & Restore.', ['OK'], 'warn'); } else if (ok) draftWarned = false; }
+      let draftWarned = false;
       function pushUndo() { undoStack.push({ m: JSON.stringify(pack(movie)), cur }); if (undoStack.length > 30) undoStack.shift(); }
       function undo() {
         if (playing) return;
@@ -2204,10 +2207,16 @@
           if (chg) b.title = 'New scene: ' + bn;
           const c = document.createElement('canvas'); c.width = 96; c.height = 72; b.appendChild(c);
           b.insertAdjacentHTML('beforeend', `<i>${i + 1}</i>${chg ? '<em>BG</em>' : ''}${fr.snd ? '<u>SND</u>' : ''}`);
-          strip.appendChild(b); thumbDraw(c, i);
+          strip.appendChild(b);
+          if (thumbIO) thumbIO.observe(b); else thumbDraw(c, i);
         });
         syncFrameUI();
       }
+      // Long movies (up to 300 frames): draw film-strip thumbnails only when they scroll into view.
+      const thumbIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(en => {
+        if (!en.isIntersecting) return; thumbIO.unobserve(en.target);
+        const i = +en.target.dataset.i, c = en.target.querySelector('canvas'); if (c && movie.frames[i]) thumbDraw(c, i);
+      }), { root: strip, rootMargin: '0px 400px' }) : null;
       function queueThumb() {
         if (thumbT) return;
         thumbT = requestAnimationFrame(() => {
@@ -2903,7 +2912,7 @@
           const put = () => {
             const l = listMovies(), j = l.findIndex(x => x.n.toLowerCase() === t.toLowerCase()), entry = { n: t, d: Date.now(), m: pack(m) };
             if (j >= 0) l[j] = entry; else l.push(entry);
-            try { api.save('movies', l); } catch (e) { api.msgBox('Movie Maker', 'The disk is full. Delete an old movie and try again.', ['OK'], 'stop'); return; }
+            if (api.save('movies', l) === false) { api.msgBox('Movie Maker', 'The disk is full, so the movie wasn\'t saved.\n\nTo make room: delete an old movie (File > Open), share a long movie as a video, or save everything to a file in Control Panel > Backup & Restore.', ['OK'], 'stop'); return; }
             api.sfx.floppy ? api.sfx.floppy() : api.sfx.ding();
             if (sp) { sp.saved = true; spEl.querySelector('.mvm-spm').textContent = `Saved as "${t}". Open it any time from File > Open.`; }
           };
@@ -2953,7 +2962,7 @@
         askText('Save Movie', 'Movie name:', name || movie.title.text || 'My Movie', 24, t => { if (t) finish(t); else done && done(false); });
       }
       function commit(list, n) {
-        try { api.save('movies', list); } catch (e) { api.msgBox('Movie Maker', 'The disk is full. Delete an old movie and try again.', ['OK'], 'stop'); return; }
+        if (api.save('movies', list) === false) { api.msgBox('Movie Maker', 'The disk is full, so the movie wasn\'t saved.\n\nTo make room: delete an old movie (File > Open), share a long movie as a video, or save everything to a file in Control Panel > Backup & Restore.', ['OK'], 'stop'); return; }
         name = n; dirty = false; setTitle(); saveDraft(); api.sfx.floppy ? api.sfx.floppy() : api.sfx.ding();
         status(`Saved "${n}" (${movie.frames.length} frames).`);
         if (movie.frames.length >= 5) api.stamp('movie-make');
@@ -3083,7 +3092,7 @@
         if (playing || sp || drag || document.hidden || !cv.isConnected || !cv.offsetParent || !movie) return;
         if (frameAnim(bgAt(movie, cur), frame())) { animT = performance.now() / 1000; draw(true); }
       }, 110);
-      W.onClose = () => { clearInterval(animTimer); stop(); spStop(); sp = null; runClean(); cancelExport(); dropURL(); clearTimeout(statusT); if (thumbT) cancelAnimationFrame(thumbT); saveDraft(); };
+      W.onClose = () => { if (thumbIO) thumbIO.disconnect(); clearInterval(animTimer); stop(); spStop(); sp = null; runClean(); cancelExport(); dropURL(); clearTimeout(statusT); if (thumbT) cancelAnimationFrame(thumbT); saveDraft(); };
       let ro = null;
       if (window.ResizeObserver) { ro = new ResizeObserver(() => layout()); ro.observe(sw); ro.observe(W.body); }
       const oc = W.onClose; W.onClose = () => { ro && ro.disconnect(); return oc(); };
