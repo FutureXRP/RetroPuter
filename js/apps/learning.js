@@ -1918,18 +1918,18 @@ ball|Throw the ___ to me!
 book|I love to read a ___.
 moon|The ___ shines at night.
 star|I made a wish on a ___.
-said|"Hello," ___ the teacher.
-they|___ are my best friends.
-come|Please ___ to my party.
-what|___ is your name?
+stop|Red means ___.
+help|Can you ___ me carry this?
+hop|A bunny can ___ very high.
+bath|I take a ___ before bed.
 have|I ___ a little puppy.
-friend|My ___ and I play tag.
+swim|Fish ___ in the pond.
 happy|I feel ___ when I see my dog.
-little|A mouse is a ___ animal.
-water|Fish live in the ___.
+sock|I put a ___ on my foot.
+sand|We dug in the ___ at the beach.
 hand|Raise your ___ to ask a question.`],
     ['2', `apple|An ___ is a healthy snack.
-before|Wash your hands ___ you eat.
+cookie|I ate a chocolate chip ___.
 chair|Sit in the ___ at the table.
 clock|The ___ says it is time for lunch.
 dream|I had a funny ___ last night.
@@ -1949,26 +1949,26 @@ school|I learn to read at ___.
 sleep|Bears ___ all winter.
 smile|Your ___ makes me happy.
 table|Set the plates on the ___.
-teacher|My ___ helps me learn.
+mitten|I lost my red ___ in the snow.
 thank|Always ___ people who help you.
 turtle|The ___ has a hard shell.
 under|The cat hid ___ the bed.
 window|Look out the ___ at the rain.
 winter|It snows in the ___.
 yellow|A banana is ___.
-because|I wore a coat ___ it was cold.
-circle|A ball is round like a ___.
-people|Many ___ came to the parade.
+basket|Put the eggs in the ___.
+puppy|The ___ wags its little tail.
+picnic|We ate lunch at a ___ in the park.
 flower|A bee sat on the ___.
-again|That was fun! Let's do it ___.`],
+rocket|The ___ flew to the moon.`],
     ['3', `animal|A giraffe is a very tall ___.
 answer|Raise your hand to ___ the question.
-beautiful|The sunset was ___.
+rainbow|A ___ has many colors.
 bridge|We walked across the ___ over the river.
 brother|My little ___ likes trucks.
 careful|Be ___ when you cross the street.
-different|Every snowflake is ___.
-enough|Do we have ___ cookies for everyone?
+pancake|I ate a ___ with syrup.
+sunshine|The ___ makes me warm.
 family|My ___ eats dinner together.
 favorite|Pizza is my ___ food.
 finally|The rain ___ stopped.
@@ -1976,28 +1976,28 @@ forest|Many trees grow in the ___.
 giant|The ___ lived at the top of the beanstalk.
 healthy|Vegetables help keep you ___.
 island|An ___ has water all around it.
-library|We borrow books from the ___.
+snowman|We built a ___ with a carrot nose.
 minute|There are sixty seconds in a ___.
 morning|I eat breakfast in the ___.
-neighbor|Our ___ lives next door.
+dragon|The ___ in the story breathed fire.
 ocean|Whales swim in the ___.
 picture|I drew a ___ of my house.
 planet|Earth is the ___ we live on.
-question|Can I ask you a ___?
+popcorn|We ate ___ at the movie.
 remember|I always ___ to brush my teeth.
 sister|My big ___ helps me with homework.
 special|Today is a ___ day.
-surprise|The party was a big ___.
-thought|I ___ hard about my answer.
+pumpkin|We carved a ___ for fall.
+birthday|My ___ is in June.
 together|Let's work ___ as a team.
-tomorrow|Today is Monday, so ___ is Tuesday.
+homework|I finish my ___ after school.
 weather|The ___ is sunny today.
-whistle|The coach blew her ___.`],
+airplane|The ___ flew above the clouds.`],
     ['4', `adventure|Camping in the woods was an ___.
-although|I finished my homework, ___ it was hard.
+backpack|I carry my books in my ___.
 astronaut|The ___ floated inside the space station.
 balance|I can ___ on one foot.
-breathe|Fish use gills to ___ underwater.
+skeleton|Your ___ is made of bones.
 calendar|Mark the party on the ___.
 celebrate|We ___ birthdays with cake.
 climate|A desert has a hot, dry ___.
@@ -2005,57 +2005,57 @@ curious|The ___ kitten looked in every box.
 dinosaur|A ___ lived millions of years ago.
 discover|Scientists ___ new things every day.
 eighty|Forty plus forty is ___.
-electricity|Lamps need ___ to light up.
+computer|I play games on the ___.
 experiment|We did a science ___ with magnets.
-February|___ is the second month of the year.
-fortunate|We were ___ to see a rainbow.
+treasure|The pirates found a chest of ___.
+volcano|Hot lava came out of the ___.
 imagine|Close your eyes and ___ a castle.
 journey|The ship's ___ took many weeks.
-knowledge|Reading books gives you ___.
+campfire|We roasted marshmallows over the ___.
 language|Spanish is a ___ spoken in many countries.
 machine|A washing ___ cleans clothes.
 measure|Use a ruler to ___ the line.
 mountain|We hiked to the top of the ___.
 nervous|I felt ___ before the big game.
-ordinary|It was an ___ day until the parade came.
+tornado|A ___ is a spinning storm.
 popular|Soccer is a ___ sport.
-receive|Did you ___ my letter?
+spaceship|The ___ zoomed past the stars.
 science|In ___ class we learned about plants.
-straight|Draw a ___ line with a ruler.
-temperature|The ___ outside is very cold.
+hamburger|I ate a ___ with cheese.
+umbrella|Open your ___ when it rains.
 thousand|Ten hundreds make one ___.
 vegetable|A carrot is a ___.`],
     ['5', `accident|Spilling the milk was an ___.
 achieve|Practice will help you ___ your goals.
 ancient|The pyramids of Egypt are ___.
-apparent|It was ___ that the puppy was hungry.
+satellite|A ___ goes around the Earth.
 appreciate|I ___ your help.
 atmosphere|Earth's ___ is the air around it.
 boundary|The river forms a ___ between the two towns.
-committee|The ___ met to plan the school fair.
-conscience|My ___ told me to tell the truth.
+octopus|An ___ has eight arms.
+telescope|We looked at the stars through a ___.
 continent|Africa is a large ___.
 definitely|I will ___ come to your game.
 disappear|The magician made the coin ___.
-embarrass|I did not mean to ___ you.
+champion|She won and became the ___.
 environment|Recycling helps protect the ___.
-exaggerate|Don't ___! The fish was not a mile long.
+invention|The light bulb was a great ___.
 fascinate|Stars and planets ___ me.
 government|The ___ makes laws for the country.
-guarantee|I ___ you will love this book.
-hygiene|Washing your hands is good ___.
+dangerous|It is ___ to play in the street.
+gravity|___ makes things fall down.
 independent|An ___ person can do many things alone.
 laboratory|The scientist works in a ___.
-mischievous|The ___ puppy chewed my shoe.
+hurricane|The ___ brought strong wind and rain.
 necessary|Water is ___ for life.
 occasion|A wedding is a special ___.
 parallel|The two train tracks are ___.
-possession|My bike is my favorite ___.
+pyramid|The ___ has four sides that meet at the top.
 recommend|I ___ this book to everyone.
-rhythm|Clap your hands to the ___ of the music.
+kangaroo|A ___ carries its baby in a pouch.
 schedule|Check the ___ to see when the bus comes.
 separate|___ the red blocks from the blue blocks.
-thorough|Give your room a ___ cleaning.
+microphone|The singer used a ___.
 vacuum|Use the ___ to clean the rug.`]
   ].map(([g, t]) => ({ g, words: t.split('\n').map(l => { const [w, s] = l.split('|'); return { w, s }; }) }));
   const GRADES = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'];
@@ -2083,7 +2083,7 @@ vacuum|Use the ___ to clean the rug.`]
       { label: 'Help', items: [{ label: 'How to play', fn: howTo }] }
     ]);
     function howTo() {
-      api.msgBox('How to play', 'Bea the Bee says a word. Type how to spell it, then press Enter (or Check).\n\nCan\'t hear? Read the sentence: the blank ______ is the word.\n\nHINTS: Hear it again, see the first letter, or see how many letters.\n\nPRACTICE: 10 words from your grade. You get more tries.\nCONTEST: spell as many words as you can! A miss costs a honey pot. You have 3. The words get harder as you go.\nWORD SCRAMBLE: put the mixed-up letters in order.\n\nEvery 10 words you spell right (without seeing the answer) earns $1, up to $4 a day.');
+      api.msgBox('How to play', 'Bea the Bee says a word. Type how to spell it, then press Enter (or Check).\n\nCan\'t hear? Read the sentence: the blank ______ is the word.\n\nHINTS: Hear it again, see the first letter, or see how many letters.\n\nPRACTICE: 10 words from your grade. Take your time: after each try you get a bigger hint, and the answer is shown after 4 tries.\nCONTEST: spell as many words as you can! If you miss, you get a hint and one more try. A second miss costs a honey pot (5 pots for Kindergarten to Grade 2, 4 after that). The words get a little harder as you go.\nWORD SCRAMBLE: put the mixed-up letters in order.\n\nEvery 5 words you spell right (without seeing the answer) earns $1, up to $6 a day.');
     }
     function pool(g) { return SPW[g].words; }
     function pickWord(g) {
@@ -2096,14 +2096,16 @@ vacuum|Use the ___ to clean the rug.`]
     }
     function go(v) { view = v; sel = 0; R0 = null; typed = ''; setHome(v === 'home'); render(); if (v === 'home') say('Hi, I\'m Bea the Bee! Let\'s spell some words!'); }
     function start(mode) {
-      R0 = { mode, n: 0, total: mode === 'practice' ? 10 : mode === 'scramble' ? 5 : Infinity, good: 0, lives: 3, streak: 0, used: new Set(), g: P.grade, word: null, tries: 0, hints: {}, fb: '', fbCls: '', locked: false, revealed: false, tiles: [], picks: [], moods: 0 };
+      const lives = P.grade <= 2 ? 5 : 4;
+      R0 = { mode, n: 0, total: mode === 'practice' ? 10 : mode === 'scramble' ? 5 : Infinity, good: 0, lives, maxLives: lives, streak: 0, used: new Set(), g: P.grade, word: null, tries: 0, hints: {}, fb: '', fbCls: '', locked: false, revealed: false, tiles: [], picks: [], moods: 0 };
       view = mode; setHome(false); nextWord();
     }
     function nextWord() {
       if (R0.n >= R0.total) return finish();
-      if (R0.mode === 'contest') R0.g = Math.min(5, P.grade + Math.floor(R0.good / 5));
+      // Contest words get a little harder only after every 8 right, and never more than one grade up.
+      if (R0.mode === 'contest') R0.g = Math.min(5, P.grade + 1, P.grade + Math.floor(R0.good / 8));
       R0.word = pickWord(R0.g); R0.used.add(R0.word.w);
-      R0.tries = 0; R0.hints = {}; R0.fb = ''; R0.fbCls = ''; R0.locked = false; R0.revealed = false; typed = '';
+      R0.tries = 0; R0.hints = R0.g <= 2 ? { count: true } : {}; R0.fb = ''; R0.fbCls = ''; R0.locked = false; R0.revealed = false; typed = '';
       if (R0.mode === 'scramble') {
         let t; let k = 0; do { t = shuffle([...R0.word.w.toLowerCase()]); } while (t.join('') === R0.word.w.toLowerCase() && ++k < 20);
         R0.tiles = t.map((c, i) => ({ c, i, used: false })); R0.picks = [];
@@ -2123,6 +2125,11 @@ vacuum|Use the ___ to clean the rug.`]
       if (norm(ans) === w.toLowerCase()) return correct();
       R0.tries++;
       api.tone(300, 0.12, { type: 'triangle', vol: 0.06 });
+      if (R0.mode === 'contest' && R0.tries === 1) {
+        R0.hints.count = true; R0.hints.first = true;
+        R0.fb = diffHint(norm(ans), w.toLowerCase()) + ' You get one more try!'; R0.fbCls = 'try'; typed = '';
+        say(R0.fb); render(); return;
+      }
       if (R0.mode === 'contest') {
         R0.lives--; R0.streak = 0; R0.locked = true; R0.revealed = true; R0.moods = -1;
         R0.fb = `Ooh, so close! It's spelled ${w.toUpperCase().split('').join('-')}.${R0.lives ? ' Keep going!' : ''}`; R0.fbCls = 'try';
@@ -2135,7 +2142,10 @@ vacuum|Use the ___ to clean the rug.`]
         R0.fb = `Not quite! ${good ? `${good} letter${good > 1 ? 's are' : ' is'} in the right spot (green).` : 'Try a different first letter.'} Tap a red letter to take it back.`;
         R0.fbCls = 'try'; say('Not quite. Try again!'); render(); return;
       }
-      if (R0.tries >= 3) { R0.revealed = true; R0.fb = `This word is spelled ${w.toUpperCase()}. Type it to practice!`; R0.fbCls = 'try'; say(`${w} is spelled ${w.split('').join(', ')}. Now you type it.`, { rate: 0.9 }); typed = ''; render(); return; }
+      if (R0.tries === 1) R0.hints.count = true;
+      if (R0.tries === 2) R0.hints.first = true;
+      if (R0.tries === 3) R0.hints.half = true;
+      if (R0.tries >= 4) { R0.revealed = true; R0.fb = `This word is spelled ${w.toUpperCase()}. Type it to practice!`; R0.fbCls = 'try'; say(`${w} is spelled ${w.split('').join(', ')}. Now you type it.`, { rate: 0.9 }); typed = ''; render(); return; }
       R0.fb = diffHint(norm(ans), w.toLowerCase()); R0.fbCls = 'try';
       R0.last = norm(ans); typed = '';
       say(R0.fb); render();
@@ -2150,7 +2160,8 @@ vacuum|Use the ___ to clean the rug.`]
       R0.good += R0.revealed ? 0 : 1; R0.locked = true; R0.streak++; R0.moods = 1;
       if (!R0.revealed && R0.mode !== 'scramble') {
         P.right++;
-        if (Math.floor(P.right / 10) > P.paid) { P.paid = Math.floor(P.right / 10); R0.earned = (R0.earned || 0) + dailyEarn(api, 4, 'spelling 10 words right'); }
+        if (P.paid5 == null) P.paid5 = Math.floor((P.right - 1) / 5);
+        if (Math.floor(P.right / 5) > P.paid5) { P.paid5 = Math.floor(P.right / 5); R0.earned = (R0.earned || 0) + dailyEarn(api, 6, 'spelling 5 words right'); }
       }
       saveP();
       const praise = pickA(['You spelled it!', 'Bee-autiful spelling!', 'Buzz-tastic!', 'Hooray, that\'s right!', 'Sweet as honey!', 'Great spelling!']);
@@ -2267,7 +2278,7 @@ vacuum|Use the ___ to clean the rug.`]
           <div class="spb-row"><button class="spb-go" data-a="again">Play again</button><button class="spb-btn" data-a="home">Menu</button></div></div>`;
       } else {
         const w = R0.word, sc = R0.mode === 'scramble', c = R0.mode === 'contest';
-        const top = c ? `<div class="spb-stand"><div class="spb-aud ${R0.moods > 0 ? 'cheer' : R0.moods < 0 ? 'ooh' : ''}">${AUD.map(k => `<span>${critSvg(k)}</span>`).join('')}</div><div class="spb-lives">${[0, 1, 2].map(i => POT(i < R0.lives)).join('')}<b>Score: ${R0.good}</b><small>${GRADES[R0.g]}</small></div></div>` : '';
+        const top = c ? `<div class="spb-stand"><div class="spb-aud ${R0.moods > 0 ? 'cheer' : R0.moods < 0 ? 'ooh' : ''}">${AUD.map(k => `<span>${critSvg(k)}</span>`).join('')}</div><div class="spb-lives">${Array.from({ length: R0.maxLives || 3 }, (_, i) => POT(i < R0.lives)).join('')}<b>Score: ${R0.good}</b><small>${GRADES[R0.g]}</small></div></div>` : '';
         const prog = c ? '' : `<span class="spb-dots">${Array.from({ length: R0.total }, (_, i) => `<i class="${i < R0.n ? 'ok' : i === R0.n ? 'now' : ''}"></i>`).join('')}</span>`;
         const shown = R0.locked || R0.revealed && !sc;
         h = `<div class="spb-hd">${back}<b>${c ? 'Spelling Bee Contest' : sc ? 'Word Scramble' : 'Practice'}</b>${prog}</div>${top}
@@ -2275,7 +2286,7 @@ vacuum|Use the ___ to clean the rug.`]
             <div class="spb-say"><div class="spb-bee">${BEE}</div><div class="spb-bub"><p>${sc ? 'Unscramble the letters!' : 'Listen, then spell the word.'}</p><p class="spb-sent">${E(shown ? w.s.replace('___', w.w) : blankS(w.s)).replace('______', '<u>&nbsp;?&nbsp;</u>')}</p></div></div>
             ${sc ? `<div class="spb-slots">${w.w.split('').map((_, j) => { const ti = R0.picks[j]; const ch = ti != null ? R0.tiles[ti].c : ''; const ok = ch && ch === w.w.toLowerCase()[j]; return `<button class="spb-slot${ch ? (R0.fbCls === 'try' ? (ok ? ' ok' : ' bad') : ' on') : ''}" data-a="u${j}"${ch ? '' : ' disabled'}>${E(ch.toUpperCase())}</button>`; }).join('')}</div>
               <div class="spb-tiles">${R0.tiles.map(t => `<button class="spb-tile" data-a="t${t.i}"${t.used || R0.locked ? ' disabled' : ''}>${E(t.c.toUpperCase())}</button>`).join('')}</div>`
-            : `<div class="spb-inrow">${R0.hints.count || R0.hints.first ? `<div class="spb-boxes">${w.w.split('').map((ch, j) => `<i>${j === 0 && R0.hints.first ? E(ch.toUpperCase()) : R0.hints.count ? '_' : ''}</i>`).join('')}</div>` : ''}
+            : `<div class="spb-inrow">${R0.hints.count || R0.hints.first ? `<div class="spb-boxes">${w.w.split('').map((ch, j) => `<i>${(j === 0 && R0.hints.first) || (R0.hints.half && j % 2 === 0) ? E(ch.toUpperCase()) : R0.hints.count ? '_' : ''}</i>`).join('')}</div>` : ''}
               <input class="spb-in" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="Type the word here" value="${E(typed)}"${R0.locked ? ' disabled' : ''} aria-label="Type the word">
               ${R0.revealed && !R0.locked ? `<div class="spb-copy">${E(w.w.toUpperCase())}</div>` : ''}</div>`}
             <div class="spb-fb ${R0.fbCls}">${E(R0.fb)}</div>
@@ -2320,7 +2331,7 @@ vacuum|Use the ___ to clean the rug.`]
       } else {
         const wd = R0.word, sc = R0.mode === 'scramble', c = R0.mode === 'contest';
         S.put(1, 1, (c ? 'CONTEST' : sc ? (wide ? 'WORD SCRAMBLE' : 'SCRAMBLE') : 'PRACTICE') + '  ' + (wide ? GRADES[R0.g].toUpperCase() : 'GRADE ' + SPW[R0.g].g), 'b');
-        S.put(w - 17, 1, c ? `HONEY ${'[*]'.repeat(R0.lives)}${'[ ]'.repeat(3 - R0.lives)}` : `Word ${Math.min(R0.n + 1, R0.total)}/${R0.total}`, 'b');
+        S.put(w - 17, 1, c ? `HONEY ${'[*]'.repeat(R0.lives)}${'[ ]'.repeat(Math.max(0, (R0.maxLives || 3) - R0.lives))}` : `Word ${Math.min(R0.n + 1, R0.total)}/${R0.total}`, 'b');
         if (c) { S.put(1, 2, `Score: ${R0.good}`); S.center(3, R0.moods > 0 ? '(^o^) (^.^) YAY! (^_^) (^o^)' : R0.moods < 0 ? '(o.o) (O_O) OOOH (o.o) (O_O)' : '(-.-) (o.o) ..... (o.o) (-.-)', R0.moods ? 'b' : 'd'); }
         bee.forEach((l, i) => S.put(wide ? 2 : 1, 5 + i, l, 'b'));
         const bx0 = wide ? 10 : 7, bw = w - bx0 - 1, tx = bx0 + 2;
@@ -2342,7 +2353,8 @@ vacuum|Use the ___ to clean the rug.`]
             else if (j === shown.length && !R0.locked) S.put(x, 12, '_', 'bk');
             else if (R0.hints.count && j < wd.w.length) S.put(x, 12, '.', 'd');
           }
-          if (R0.hints.first) S.center(14, `Starts with ${wd.w[0].toUpperCase()}` + (R0.hints.count ? `, ${wd.w.length} letters` : ''), 'd');
+          if (R0.hints.half) S.center(14, 'Letters: ' + wd.w.split('').map((ch, j) => j % 2 === 0 ? ch.toUpperCase() : '_').join(' '), 'd');
+          else if (R0.hints.first) S.center(14, `Starts with ${wd.w[0].toUpperCase()}` + (R0.hints.count ? `, ${wd.w.length} letters` : ''), 'd');
           else if (R0.hints.count) S.center(14, `${wd.w.length} letters`, 'd');
           if (R0.revealed && !R0.locked) S.center(15, 'COPY IT: ' + wd.w.toUpperCase(), 'b');
         }
