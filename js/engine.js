@@ -556,6 +556,8 @@ function appApi(p, W) {
     openUrl: url => era.apps.includes('nv') ? openBrowser(url) : null,
     openApp,
     stamp: id => stamp(id),
+    // Shared links: #YEAR&key=value. An app reads its parameter once, then clears it so a reload doesn't repeat it.
+    param: k => HASH[k], clearParam: k => { delete HASH[k]; try { history.replaceState(null, '', location.pathname + location.search + '#' + era.id); } catch (e) {} },
     task: (type, data) => taskEvent(type, data),
     jobs: () => (typeof todaysJobs === 'function' ? todaysJobs() : [])
   };
@@ -2629,6 +2631,10 @@ function setEra(id) {
 function renderPower() {
   $('#pw-head').innerHTML = `It's ${era.year}.<br>The computer is off.`;
   $('#pw-blurb').textContent = era.power;
+  // Arriving from a shared link: say what's waiting. The Power on tap is still needed (browsers only allow sound after a tap).
+  const shared = HASH.movie && !HASH.movieOpened ? (era.id === '2000' ? 'Someone shared a movie with you! Press Power on and it will play in Movie Maker.' : 'Someone shared a movie with you! Pick 2000, then press Power on to watch it.')
+    : HASH.page && !HASH.opened && era.apps.includes('nv') ? 'Someone shared a home page with you! Press Power on to see it.' : '';
+  if (shared) $('#pw-blurb').innerHTML = `<b class="pw-shared">${esc(shared)}</b><br>${esc(era.power)}`;
   const box = $('#pw-eras'); box.innerHTML = '';
   ERA_IDS.forEach(id => {
     const E = ERAS[id], b = document.createElement('button');
@@ -2888,6 +2894,8 @@ function finishDesk() {
   allowance();
   if (tester()) setTimeout(() => toast('Tester mode: unlimited money in this browser. Turn it off in Control Panel.'), 1600);
   // A shared home-page link (#1995&page=…) opens straight to that page, already online.
+  // A shared movie link (#2000&movie=…) opens Movie Maker, which plays it.
+  if (HASH.movie && !HASH.movieOpened && findApp('moviemaker')) { HASH.movieOpened = true; setTimeout(() => { if (booted) openApp('moviemaker'); }, 1200); }
   if (HASH.page && !HASH.opened && era.apps.includes('nv')) {
     HASH.opened = true;
     setTimeout(() => { if (!booted) return; net.connected = true; net.since = Date.now(); refreshTray(); toast('Connected. Opening the home page someone shared with you…'); openBrowser(SHARE_URL); }, 700);

@@ -56,6 +56,7 @@
   /* ---------- model ---------- */
   const mkFig = (id, c, x, y, pose) => ({ id, c, x, y, a: (Array.isArray(pose) ? pose : POSE[pose || 'stand']).slice() });
   const mkProp = (id, k, x, y, o = {}) => ({ id, k, x, y, s: o.s || 1, c: o.c ?? PROPC0[k], t: o.t || '', a: o.a || 0 });
+  // A frame's own `bg` marks a scene change; frames without one use the latest earlier change (or movie.bg). Copies never carry it.
   const cloneFrame = fr => ({ snd: fr.snd || '', figs: fr.figs.map(g => ({ ...g, a: g.a.slice() })), props: fr.props.map(p => ({ ...p })) });
   function newMovie(user) {
     return {
@@ -66,30 +67,46 @@
     };
   }
   const r0 = v => Math.round(v);
+  const isBg = v => BGS.some(b => b[0] === v);
+  // Background of every frame, in order (frame 0 may carry a marker only while loading).
+  function bgList(m) { let b = m.bg; return m.frames.map(fr => (b = fr.bg || b)); }
+  function bgAt(m, i) { for (let k = Math.min(i, m.frames.length - 1); k >= 0; k--) if (m.frames[k].bg) return m.frames[k].bg; return m.bg; }
+  // Store a full per-frame list back as the starting background plus change markers only where it changes.
+  function setBgs(m, arr) { m.bg = arr[0] || m.bg; m.frames.forEach((fr, i) => { if (i && arr[i] !== arr[i - 1]) fr.bg = arr[i]; else delete fr.bg; }); }
   function pack(m) {
     return {
       b: m.bg, r: m.fps, l: m.loop ? 1 : 0, i: m.nid,
       t: [m.title.on ? 1 : 0, m.title.text, m.title.sub, m.title.font, m.title.look],
       c: [m.credits.on ? 1 : 0, m.credits.text, m.credits.font],
-      f: m.frames.map(fr => [fr.snd || 0,
+      f: m.frames.map(fr => { const a = [fr.snd || 0,
         fr.figs.map(g => [g.id, g.c, r0(g.x), r0(g.y), ...g.a.map(r0)]),
-        fr.props.map(p => { const a = [p.id, p.k, r0(p.x), r0(p.y), r0(p.s * 10), p.c]; if (p.k === 5 || p.a) a.push(p.k === 5 ? p.t : ''); if (p.a) a.push(r0(p.a)); return a; })])
+        fr.props.map(p => { const a = [p.id, p.k, r0(p.x), r0(p.y), r0(p.s * 10), p.c]; if (p.k === 5 || p.a) a.push(p.k === 5 ? p.t : ''); if (p.a) a.push(r0(p.a)); return a; })];
+        if (fr.bg) a.push(fr.bg); // 4th item only on frames where the scene changes; older movies simply don't have it
+        return a; })
     };
   }
+  // Loading is defensive: saved drafts, old movies and shared links all come through here, so every field is checked and capped.
+  const num = (v, d, lo, hi) => { v = +v; return Number.isFinite(v) ? clamp(v, lo, hi) : d; };
+  const arrOf = v => Array.isArray(v) ? v : [];
+  const txt = (v, n) => (typeof v === 'string' || typeof v === 'number') ? String(v).slice(0, n) : '';
   function unpack(d) {
     const m = newMovie('you');
-    if (!d || !Array.isArray(d.f) || !d.f.length) return m;
-    if (BGS.some(b => b[0] === d.b)) m.bg = d.b;
-    m.fps = clamp(+d.r || 8, 4, 12); m.loop = !!d.l;
-    if (Array.isArray(d.t)) m.title = { on: !!d.t[0], text: String(d.t[1] || ''), sub: String(d.t[2] || ''), font: clamp(+d.t[3] || 0, 0, FONTS.length - 1), look: clamp(+d.t[4] || 0, 0, LOOKS.length - 1) };
-    if (Array.isArray(d.c)) m.credits = { on: !!d.c[0], text: String(d.c[1] || ''), font: clamp(+d.c[2] || 0, 0, FONTS.length - 1) };
+    const F = d && arrOf(d.f).filter(Array.isArray);
+    if (!F || !F.length) return m;
+    if (isBg(d.b)) m.bg = d.b;
+    m.fps = num(d.r, 8, 4, 12) | 0; m.loop = !!d.l;
+    if (Array.isArray(d.t)) m.title = { on: !!d.t[0], text: txt(d.t[1], 28), sub: txt(d.t[2], 40), font: num(d.t[3], 0, 0, FONTS.length - 1) | 0, look: num(d.t[4], 0, 0, LOOKS.length - 1) | 0 };
+    if (Array.isArray(d.c)) m.credits = { on: !!d.c[0], text: txt(d.c[1], 240).split('\n').slice(0, 12).join('\n'), font: num(d.c[2], 0, 0, FONTS.length - 1) | 0 };
     let top = 1;
-    m.frames = d.f.slice(0, MAXF).map(fr => ({
+    const id = v => { v = num(v, 1, 1, 1e6) | 0; top = Math.max(top, v); return v; };
+    m.frames = F.slice(0, MAXF).map(fr => ({
       snd: SOUNDS.some(s => s[0] === fr[0]) ? fr[0] : '',
-      figs: (fr[1] || []).slice(0, MAXFIG).map(g => { top = Math.max(top, g[0]); return { id: g[0], c: clamp(g[1] | 0, 0, FIGC.length - 1), x: +g[2], y: +g[3], a: g.slice(4, 14).map(Number) }; }).filter(g => g.a.length === 10),
-      props: (fr[2] || []).slice(0, MAXPROP).map(p => { top = Math.max(top, p[0]); return { id: p[0], k: clamp(p[1] | 0, 0, 5), x: +p[2], y: +p[3], s: clamp((+p[4] || 10) / 10, 0.4, 3), c: clamp(p[5] | 0, 0, PROPC.length - 1), t: String(p[6] || ''), a: norm(+p[7] || 0) }; })
+      figs: arrOf(fr[1]).filter(Array.isArray).slice(0, MAXFIG).map(g => ({ id: id(g[0]), c: num(g[1], 0, 0, FIGC.length - 1) | 0, x: num(g[2], 160, -60, VW + 60), y: num(g[3], 161, -60, VH + 60), a: g.slice(4, 14).map(v => norm(num(v, 0, -720, 720))) })).filter(g => g.a.length === 10),
+      props: arrOf(fr[2]).filter(Array.isArray).slice(0, MAXPROP).map(p => ({ id: id(p[0]), k: num(p[1], 0, 0, 5) | 0, x: num(p[2], 160, -60, VW + 60), y: num(p[3], 120, -60, VH + 60), s: num(p[4] || 10, 10, 4, 30) / 10, c: num(p[5], 0, 0, PROPC.length - 1) | 0, t: txt(p[6], 40), a: norm(num(p[7], 0, -720, 720)) })),
+      ...(isBg(fr[3]) ? { bg: fr[3] } : {})
     }));
-    m.nid = Math.max(+d.i || 0, top + 1);
+    m.nid = Math.max(num(d.i, 0, 0, 1e6) | 0, top + 1);
+    setBgs(m, bgList(m));
     return m;
   }
   function joints(g) {
@@ -288,9 +305,9 @@
     }
     ctx.restore();
   }
-  function drawFrame(ctx, m, fr, w, h, o = {}) {
+  function drawFrame(ctx, bg, fr, w, h, o = {}) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(bgImage(m.bg, w, h), 0, 0);
+    ctx.drawImage(bgImage(bg, w, h), 0, 0);
     ctx.setTransform(w / VW, 0, 0, h / VH, 0, 0);
     if (o.onion) { ctx.globalAlpha = 0.28; o.onion.figs.forEach(g => drawFig(ctx, g)); o.onion.props.forEach(p => drawProp(ctx, p)); ctx.globalAlpha = 1; }
     fr.figs.forEach(g => drawFig(ctx, g));
@@ -361,6 +378,94 @@
     };
     if (S[id]) S[id]();
   }
+  // The same sound recipes, played into any AudioContext node (used to record sound into a video file).
+  function synth(ac, dest) {
+    const nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = nb.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    function env(g, t, dur, v, o) {
+      g.gain.setValueAtTime(0.0001, t);
+      if (o.decay) { g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
+      else { const a = o.attack || 0.004, r = o.release || 0.02; g.gain.linearRampToValueAtTime(v, t + a); g.gain.setValueAtTime(v, t + Math.max(dur - r, a + 0.001)); g.gain.linearRampToValueAtTime(0.0001, t + dur); }
+    }
+    const tone = (f, dur, o = {}) => {
+      const t = ac.currentTime + (o.at || 0), osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = o.type || 'square'; osc.frequency.setValueAtTime(f, t); if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+      env(g, t, dur, o.vol ?? 0.1, o); osc.connect(g); g.connect(dest); osc.start(t); osc.stop(t + dur + 0.05);
+    };
+    const noise = (dur, o = {}) => {
+      const t = ac.currentTime + (o.at || 0), src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = nb; src.loop = true; f.type = o.ft || 'bandpass'; f.frequency.value = o.f || 2000; f.Q.value = o.q || 1;
+      env(g, t, dur, o.vol ?? 0.2, o); src.connect(f); f.connect(g); g.connect(dest); src.start(t, Math.random()); src.stop(t + dur + 0.05);
+    };
+    return { tone, noise, sfx: { ding() { tone(1318.5, 0.7, { type: 'triangle', vol: 0.12, decay: 1 }); tone(1975.5, 0.5, { type: 'sine', vol: 0.05, decay: 1, at: 0.01 }); } } };
+  }
+
+  /* ---------- whole-movie timeline (shared player and video export) ---------- */
+  // Title card, the frames (a looping movie plays a few times, so it still ends), credits, then a short hold.
+  function mkSeq(m) {
+    const seq = []; let t = 0;
+    const add = (k, d, x) => { seq.push({ k, t0: t, d, ...x }); t += d; };
+    if (m.title.on && (m.title.text || m.title.sub)) add('title', 2.4);
+    const n = m.frames.length, reps = m.loop ? clamp(Math.ceil(6 * m.fps / n), 1, 3) : 1;
+    add('frames', n * reps / m.fps, { n: n * reps });
+    if (m.credits.on && m.credits.text.trim()) add('credits', creditsDur(m));
+    return { seq, total: t + 0.4 };
+  }
+  // Draws the movie at time t (seconds). Returns { i: frame index or -1, g: frame counter for sounds }.
+  function renderAt(ctx, m, S, t, w, h) {
+    const st = S.seq.find(s => t < s.t0 + s.d) || S.seq[S.seq.length - 1], lt = clamp(t - st.t0, 0, st.d);
+    if (st.k === 'frames') {
+      const n = m.frames.length, g = Math.min(st.n - 1, Math.floor(lt * m.fps)), i = g % n;
+      drawFrame(ctx, bgAt(m, i), m.frames[i], w, h);
+      return { i, g };
+    }
+    if (st.k === 'title') drawTitle(ctx, m, Math.min(1, lt / st.d), w, h); else drawCredits(ctx, m, Math.min(1, lt / st.d), w, h);
+    return { i: -1, g: -1 };
+  }
+
+  /* ---------- share links: packed movie -> (deflate) -> base64url, with a version letter in front ---------- */
+  // 'z' = deflate-raw compressed JSON, 'j' = plain JSON (browsers without CompressionStream).
+  function b64u(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function unb64u(s) {
+    if (!/^[A-Za-z0-9_-]+$/.test(s)) throw new Error('bad chars');
+    s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+    const bin = atob(s), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out;
+  }
+  async function pipeBytes(bytes, T, limit) {
+    const r = new Blob([bytes]).stream().pipeThrough(T).getReader(), parts = []; let n = 0;
+    for (;;) { const { done, value } = await r.read(); if (done) break; n += value.length; if (n > limit) { r.cancel().catch(() => {}); throw new Error('too big'); } parts.push(value); }
+    const out = new Uint8Array(n); let o = 0; parts.forEach(p => { out.set(p, o); o += p.length; }); return out;
+  }
+  async function encodeMovie(m) {
+    const json = new TextEncoder().encode(JSON.stringify(pack(m)));
+    if (window.CompressionStream) { try { return 'z' + b64u(await pipeBytes(json, new CompressionStream('deflate-raw'), 4e6)); } catch (e) { /* fall back to plain */ } }
+    return 'j' + b64u(json);
+  }
+  // Data only: the link is parsed as JSON and every field goes through unpack(); nothing in it is ever run.
+  async function decodeMovie(s) {
+    if (typeof s !== 'string' || s.length < 8 || s.length > 400000) throw new Error('bad length');
+    const v = s[0], bytes = unb64u(s.slice(1));
+    let raw;
+    if (v === 'z') { if (!window.DecompressionStream) throw new Error('old browser'); raw = await pipeBytes(bytes, new DecompressionStream('deflate-raw'), 2e6); }
+    else if (v === 'j') raw = bytes;
+    else throw new Error('unknown version');
+    const d = JSON.parse(new TextDecoder().decode(raw));
+    if (!d || typeof d !== 'object' || !arrOf(d.f).some(Array.isArray)) throw new Error('no frames');
+    return unpack(d);
+  }
+  // Kid safety for movies from other people: run their words through the chat filter before showing them.
+  function safeText(s) {
+    const BB = window.BuddyBrain;
+    if (!s || !BB || typeof BB.filter !== 'function') return s;
+    try { const f = BB.filter(s); return (f.flagged || f.pii) ? String(f.clean || '').slice(0, s.length + 8) : s; } catch (e) { return s; }
+  }
+  function cleanMovie(m) {
+    m.title.text = safeText(m.title.text); m.title.sub = safeText(m.title.sub);
+    m.credits.text = m.credits.text.split('\n').map(safeText).join('\n');
+    m.frames.forEach(fr => fr.props.forEach(p => { if (p.t) p.t = safeText(p.t); }));
+    return m;
+  }
+  const fileName = s => (String(s || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'My-Movie');
 
   /* ---------- example movies (built from key poses + tweens) ---------- */
   function build(opts, keys) {
@@ -370,11 +475,13 @@
     m.credits = { on: true, text: opts.credits, font: opts.font };
     m.frames = [];
     keys.forEach(([fr, n], i) => { m.frames.push(fr); const nx = keys[i + 1]; if (nx && n) m.frames.push(...tween(fr, nx[0], n)); });
+    setBgs(m, bgList(m));
     return m;
   }
-  const K = (snd, figs, props = []) => ({ snd, figs, props });
+  // A key frame; `bg` switches the scenery from this frame on.
+  const K = (snd, figs, props = [], bg) => ({ snd, figs, props, ...(bg ? { bg } : {}) });
   const EXAMPLES = [
-    ['Kick Off!', () => build({ bg: 'park', fps: 8, title: 'Kick Off!', sub: 'A short film about a big kick', font: 0, look: 1, credits: 'Kick Off!\n\nKicker ..... Stick Sam\nBall ..... Itself\n\nFilmed in the Park\n\nThe End' }, [
+    ['Kick Off!', () => build({ bg: 'park', fps: 8, title: 'Kick Off!', sub: 'A short film about a big kick', font: 0, look: 1, credits: 'Kick Off!\n\nKicker ..... Stick Sam\nBall ..... Itself\n\nFilmed in the Park\nand in Outer Space\n\nThe End' }, [
       [K('', [mkFig(1, 2, 60, 161, 'stand')], [mkProp(2, 0, 150, 196)]), 3],
       [K('', [mkFig(1, 2, 100, 161, 'walk1')], [mkProp(2, 0, 150, 196)]), 2],
       [K('', [mkFig(1, 2, 118, 158, 'windup')], [mkProp(2, 0, 150, 196)]), 1],
@@ -382,6 +489,11 @@
       [K('whoosh', [mkFig(1, 2, 124, 163, 'kick')], [mkProp(2, 0, 190, 140)]), 1],
       [K('', [mkFig(1, 2, 126, 161, 'stand')], [mkProp(2, 0, 250, 70)]), 1],
       [K('', [mkFig(1, 2, 126, 161, 'wave')], [mkProp(2, 0, 300, 20)]), 0],
+      [K('whoosh', [], [mkProp(2, 0, 20, 225, { s: 0.8 })], 'space'), 2],
+      [K('', [], [mkProp(2, 0, 150, 130, { s: 0.8 })]), 2],
+      [K('zap', [], [mkProp(2, 0, 250, 20, { s: 0.7 }), mkProp(4, 4, 262, 28, { s: 0.7 })]), 0],
+      [K('', [mkFig(1, 2, 126, 161, 'wave')], [mkProp(3, 5, 190, 80, { t: 'Where did it go?' })], 'park'), 0],
+      [K('', [mkFig(1, 2, 126, 161, 'wave')], [mkProp(3, 5, 190, 80, { t: 'Where did it go?' })]), 0],
       [K('cheer', [mkFig(1, 2, 126, 150, 'cheer')], [mkProp(3, 5, 170, 90, { t: 'What a kick!' })]), 0],
       [K('', [mkFig(1, 2, 126, 161, 'cheer')], [mkProp(3, 5, 170, 90, { t: 'What a kick!' })]), 0],
       [K('', [mkFig(1, 2, 126, 150, 'cheer')], [mkProp(3, 5, 170, 90, { t: 'What a kick!' })]), 0]
@@ -432,6 +544,7 @@
     skate: svg(18, '<rect x="1" y="8" width="14" height="2" fill="#f70" stroke="#000" stroke-width=".5"/><rect x="3" y="11" width="2" height="2" fill="#222"/><rect x="11" y="11" width="2" height="2" fill="#222"/>'),
     star: svg(18, '<path shape-rendering="auto" d="M8 1l2 4.6 5 .5-3.8 3.3 1.1 5L8 11.8 3.7 14.4l1.1-5L1 6.1l5-.5z" fill="#fc0" stroke="#850" stroke-width=".7"/>'),
     bubble: svg(18, '<g shape-rendering="auto"><rect x="1" y="2" width="14" height="9" rx="3" fill="#fff" stroke="#000"/><path d="M4 11l-1 4 4-4" fill="#fff" stroke="#000"/><path d="M4 6h8M4 8h5" stroke="#000" stroke-width=".8"/></g>'),
+    share: svg(16, '<rect x="1" y="4" width="9" height="8" fill="#fff" stroke="#000"/><rect x="2" y="5" width="7" height="3" fill="#8fd0ff"/><rect x="2" y="8" width="7" height="3" fill="#4a4"/><path d="M11 5h2V3l3 3-3 3V7h-2z" fill="#06c"/>'),
     titles: svg(16, '<rect x="1" y="2" width="14" height="12" fill="#000"/><rect x="3" y="5" width="10" height="2" fill="#fc0"/><rect x="5" y="9" width="6" height="1" fill="#fff"/>')
   };
   const PICON = ['ball', 'hat', 'balloon', 'skate', 'star', 'bubble'];
@@ -441,7 +554,7 @@
   (window.RETRO_APPS = window.RETRO_APPS || []).push({
     id: 'moviemaker',
     label: 'Movie Maker',
-    help: 'Make your own stick-figure cartoons frame by frame, with backgrounds, props, sound effects, titles and credits.',
+    help: 'Make your own stick-figure cartoons frame by frame, with changing backgrounds, props, sound effects, titles and credits, then share them with friends as a video or a link.',
     kind: 'builtin',
     eras: ['2000'],
     cat: 'acc',
@@ -486,6 +599,7 @@
       .mvm-th canvas{width:64px;height:48px;display:block}
       .mvm-th.cur{border-color:#ffd000;box-shadow:0 0 0 1px #000}
       .mvm-th i{position:absolute;left:0;top:0;background:rgba(0,0,0,.65);color:#fff;font:bold 9px/1 var(--ui);padding:1px 3px;font-style:normal}
+      .mvm-th em{position:absolute;right:0;top:0;background:#1e8c2a;color:#fff;font:bold 8px/1 var(--ui);padding:1px 2px;font-style:normal;border-left:1px solid #000;border-bottom:1px solid #000}
       .mvm-th u{position:absolute;right:0;bottom:0;background:#ffd000;color:#000;font:bold 8px/1 var(--ui);padding:1px 2px;text-decoration:none}
       .mvm-ov{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5;padding:8px}
       .mvm-ov[hidden]{display:none}
@@ -507,6 +621,27 @@
       .mvm-help p{margin:0 0 6px}
       .mvm-tws{display:flex;gap:6px;flex-wrap:wrap}
       .mvm-tws .btn{min-width:44px}
+      .mvm-shr{display:flex;gap:6px}
+      .mvm-shr .btn{flex:1;min-height:34px;padding:4px 6px;display:flex;align-items:center;justify-content:center;gap:5px}
+      .mvm-shr .btn.down{font-weight:700}
+      .mvm-pane{display:flex;flex-direction:column;gap:6px;min-height:90px}
+      .mvm-pane p{margin:0}
+      .mvm-pane .mvm-acts{display:flex;flex-wrap:wrap;gap:6px}
+      .mvm-pane .mvm-acts .btn{min-height:28px;padding:3px 10px;display:inline-flex;align-items:center;text-decoration:none;color:#000}
+      .mvm-pv{display:block;width:192px;height:144px;margin:0 auto;background:#000;box-shadow:0 0 0 1px #000}
+      .mvm-pb{height:18px;background:#fff;padding:2px;box-sizing:border-box}
+      .mvm-pb i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#0a246a 0 8px,transparent 8px 10px)}
+      .mvm-link{font:11px/1.3 "Courier New",monospace;width:100%;height:58px;resize:none;box-sizing:border-box;word-break:break-all}
+      .mvm-warn{background:#ffffe1;border:1px solid #000;padding:3px 5px}
+      .mvm-sp{position:absolute;inset:0;z-index:4;background:#d4d0c8;display:flex;flex-direction:column;gap:4px;padding:4px;box-sizing:border-box}
+      .mvm-sp[hidden]{display:none}
+      .mvm-spt{font-weight:700;font-size:15px;padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .mvm-sps{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden}
+      .mvm-sps canvas{display:block}
+      .mvm-spm{min-height:16px;padding:0 4px;color:#222}
+      .mvm-spb{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:2px}
+      .mvm-spb .btn{min-height:34px;padding:4px 12px;display:inline-flex;align-items:center;gap:5px}
+      .mvm-spe{margin:auto;max-width:320px;padding:12px;background:#fff;text-align:center;line-height:1.4}
       .mvm.narrow .mvm-main{flex-direction:column}
       .mvm.narrow .mvm-side{width:auto;flex-direction:row;flex-wrap:wrap;overflow:visible;align-items:stretch;order:2}
       .mvm.narrow .mvm-cap{display:none}
@@ -534,6 +669,7 @@
           <button class="btn mvm-b" data-a="add" title="Add the next frame (a copy of this one)">${IC.add}<span>Add frame</span></button>
           <button class="btn mvm-b" data-a="tween" title="Make in-between frames up to the next frame">${IC.tween}<span>Tween</span></button>
           <button class="btn mvm-b mvm-play" data-a="play">${IC.play}<span>Play</span></button>
+          <button class="btn mvm-b" data-a="share" title="Share your movie with friends">${IC.share}<span>Share</span></button>
           <span class="mvm-sep"></span>
           <label class="mvm-spd"><span class="mvm-lbl">Speed</span><input type="range" min="4" max="12" step="1" class="mvm-fpsr" aria-label="Frames per second"><b class="mvm-fps">8 fps</b></label>
           <label class="mvm-ck"><input type="checkbox" class="mvm-onion">Onion</label>
@@ -547,7 +683,7 @@
               ${PROPN.map((n, k) => `<button class="btn mvm-b" data-add="${k}" title="Add a ${n.toLowerCase()}" aria-label="Add ${n}">${IC[PICON[k]]}</button>`).join('')}
             </div>
             <div class="mvm-cap">Scene</div>
-            <select class="mvm-bg" aria-label="Background">${BGS.map(b => `<option value="${b[0]}">${b[1]}</option>`).join('')}</select>
+            <select class="mvm-bg" aria-label="Background for this frame and the frames after it" title="Background for this frame and the frames after it (up to the next scene change)">${BGS.map(b => `<option value="${b[0]}">${b[1]}</option>`).join('')}</select>
             <button class="btn mvm-b" data-a="titles">${IC.titles}<span>Titles</span></button>
           </div>
           <div class="mvm-sw sunken"><canvas class="mvm-cv"></canvas><span class="mvm-badge"></span><span class="mvm-rec">PLAYING</span></div>
@@ -562,6 +698,7 @@
           </div>
           <div class="mvm-strip sunken"></div>
         </div>
+        <div class="mvm-sp" hidden></div>
         <div class="mvm-ov" hidden></div>
       </div>`;
       const root = $('.mvm'), cv = $('.mvm-cv'), ctx = cv.getContext('2d'), sw = $('.mvm-sw'), strip = $('.mvm-strip'), ov = $('.mvm-ov');
@@ -592,12 +729,12 @@
         const dpr = Math.min(2, window.devicePixelRatio || 1);
         cw = Math.round(w * dpr); ch = Math.round(h * dpr);
         if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
-        draw();
+        draw(); spLayout();
       }
       function draw() {
         if (playing) return;
         const fr = frame();
-        drawFrame(ctx, movie, fr, cw, ch, { onion: onion && cur > 0 ? movie.frames[cur - 1] : null });
+        drawFrame(ctx, bgAt(movie, cur), fr, cw, ch, { onion: onion && cur > 0 ? movie.frames[cur - 1] : null });
         // joint handles
         const pxu = cv.getBoundingClientRect().width / VW || 1;
         const r = (coarse ? 6.5 : 4.5) / pxu;
@@ -624,15 +761,18 @@
       /* ----- timeline ----- */
       function thumbDraw(c, i) {
         const x = c.getContext('2d');
-        drawFrame(x, movie, movie.frames[i], c.width, c.height);
+        drawFrame(x, bgAt(movie, i), movie.frames[i], c.width, c.height);
       }
       function renderStrip() {
         strip.innerHTML = '';
+        const bgs = bgList(movie);
         movie.frames.forEach((fr, i) => {
           const b = document.createElement('button'); b.className = 'mvm-th' + (i === cur ? ' cur' : ''); b.dataset.i = i;
-          b.setAttribute('aria-label', 'Frame ' + (i + 1));
+          const chg = i > 0 && bgs[i] !== bgs[i - 1], bn = (BGS.find(x => x[0] === bgs[i]) || BGS[0])[1];
+          b.setAttribute('aria-label', 'Frame ' + (i + 1) + (chg ? ', new scene: ' + bn : ''));
+          if (chg) b.title = 'New scene: ' + bn;
           const c = document.createElement('canvas'); c.width = 96; c.height = 72; b.appendChild(c);
-          b.insertAdjacentHTML('beforeend', `<i>${i + 1}</i>${fr.snd ? '<u>SND</u>' : ''}`);
+          b.insertAdjacentHTML('beforeend', `<i>${i + 1}</i>${chg ? '<em>BG</em>' : ''}${fr.snd ? '<u>SND</u>' : ''}`);
           strip.appendChild(b); thumbDraw(c, i);
         });
         syncFrameUI();
@@ -653,6 +793,7 @@
         if (b) { const L = b.offsetLeft, R = L + b.offsetWidth; if (L < strip.scrollLeft) strip.scrollLeft = L - 8; else if (R > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = R - strip.clientWidth + 8; }
         $('.mvm-fno').textContent = `Frame ${cur + 1} of ${movie.frames.length}`;
         $('.mvm-snd').value = frame().snd || '';
+        $('.mvm-bg').value = bgAt(movie, cur);
       }
       function go(i, silent) {
         if (playing) return;
@@ -664,7 +805,7 @@
       function syncControls() {
         $('.mvm-fpsr').value = movie.fps; $('.mvm-fps').textContent = movie.fps + ' fps';
         $('.mvm-loop').checked = movie.loop; $('.mvm-onion').checked = onion;
-        $('.mvm-bg').value = movie.bg;
+        $('.mvm-bg').value = bgAt(movie, cur);
       }
 
       /* ----- frame operations ----- */
@@ -679,7 +820,8 @@
       function delFrame() {
         if (playing) return;
         if (movie.frames.length < 2) { api.msgBox('Movie Maker', 'A movie needs at least one frame.', ['OK'], 'info'); return; }
-        pushUndo(); movie.frames.splice(cur, 1); cur = Math.min(cur, movie.frames.length - 1);
+        // The next frame takes over a scene change made on the deleted frame, so later scenery stays put.
+        pushUndo(); const bgs = bgList(movie); bgs.splice(cur, 1); movie.frames.splice(cur, 1); setBgs(movie, bgs); cur = Math.min(cur, movie.frames.length - 1);
         if (sel && !findSel()) sel = null;
         renderStrip(); draw(); renderSel(); touch(); api.sfx.blip(330);
       }
@@ -701,6 +843,19 @@
           <p style="margin:0;color:#444">More frames = smoother and slower movement.</p>`, ['Cancel'], d => {
           d.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { closeDlg(); doTween(+b.dataset.n); });
         });
+      }
+
+      // Picking a background on frame `cur` changes it from here up to (not including) the next frame where the scene already changes.
+      function setBg(v) {
+        if (!isBg(v) || v === bgAt(movie, cur)) return;
+        pushUndo();
+        const old = bgList(movie), arr = old.slice();
+        let k = cur;
+        for (; k < arr.length; k++) { if (k > cur && old[k] !== old[k - 1]) break; arr[k] = v; }
+        setBgs(movie, arr);
+        renderStrip(); draw(); touch(); api.sfx.click();
+        const bn = BGS.find(x => x[0] === v)[1];
+        status(movie.frames.length < 2 ? `Background: ${bn}.` : k - 1 === cur ? `${bn} on frame ${cur + 1} only (the next frame has its own scene).` : k >= arr.length ? `${bn} from frame ${cur + 1} to the end.` : `${bn} for frames ${cur + 1} to ${k}. Frame ${k + 1} keeps its own scene.`);
       }
 
       /* ----- cast ----- */
@@ -845,6 +1000,7 @@
       let raf = 0;
       function play() {
         if (playing) { stop(); return; }
+        if (sp) { spPlay(); return; }
         sel = null; renderSel();
         const seq = [];
         if (movie.title.on && (movie.title.text || movie.title.sub)) seq.push({ k: 'title', d: 2.4 });
@@ -865,7 +1021,7 @@
           const i = fi % n;
           if (fi !== P.fi) {
             P.fi = fi;
-            drawFrame(ctx, movie, movie.frames[i], cw, ch);
+            drawFrame(ctx, bgAt(movie, i), movie.frames[i], cw, ch);
             if (movie.frames[i].snd) playSnd(api, movie.frames[i].snd);
             badge.textContent = `Frame ${i + 1}/${n}`;
             [...strip.children].forEach((b, k) => b.classList.toggle('cur', k === i));
@@ -888,8 +1044,10 @@
       }
 
       /* ----- overlays ----- */
-      let dlgKey = null;
+      let dlgKey = null, dlgClean = null;
+      function runClean() { if (dlgClean) { const f = dlgClean; dlgClean = null; try { f(); } catch (e) { /* ignore */ } } }
       function dialog(title, html, buttons, init, onBtn) {
+        runClean();
         ov.innerHTML = `<div class="mvm-dlg raised" role="dialog" aria-label="${api.esc(title)}"><div class="mvm-dt">${api.esc(title)}</div><div class="mvm-dc">${html}</div><div class="mvm-db">${buttons.map(b => `<button class="btn" data-b="${api.esc(b)}">${api.esc(b)}</button>`).join('')}</div></div>`;
         ov.hidden = false;
         ov.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { api.sfx.click(); const r = onBtn ? onBtn(b.dataset.b, ov) : undefined; if (r !== false) closeDlg(); });
@@ -897,7 +1055,7 @@
         init && init(ov);
         const first = ov.querySelector('input,textarea,select,button'); first && setTimeout(() => { first.focus(); first.select && first.select(); }, 30);
       }
-      function closeDlg() { ov.hidden = true; ov.innerHTML = ''; dlgKey = null; }
+      function closeDlg() { runClean(); ov.hidden = true; ov.innerHTML = ''; dlgKey = null; }
       function askText(title, label, val, max, cb) {
         dialog(title, `<label>${api.esc(label)}<input type="text" maxlength="${max}" value="${api.esc(val || '')}"></label>`, ['OK', 'Cancel'], null, (b, d) => {
           cb(b === 'OK' ? d.querySelector('input').value.trim() : null);
@@ -924,15 +1082,251 @@
       }
       function helpDlg() {
         dialog('How to use Movie Maker', `<div class="mvm-help">
-          <p><b>1. Set the scene.</b> Pick a background under Scene. Add stick figures (up to 3) and props from the Cast.</p>
+          <p><b>1. Set the scene.</b> Pick a background under Scene. Add stick figures (up to 3) and props from the Cast. You can change the scenery partway through: go to a frame and pick a new background. It changes that frame and the frames after it, up to the next place where you already changed it. A green BG tag in the film strip marks each scene change.</p>
           <p><b>2. Pose.</b> Drag the white dots to bend heads, arms and legs. Drag the red hip dot (or a limb) to move the whole figure. Drag props to move them. To tilt a prop (like an angled skateboard), drag its round yellow handle, or use the Tilt buttons or the [ and ] keys.</p>
           <p><b>3. Animate.</b> Press <b>Add frame</b> to copy this frame, then change the pose a little. Onion skin shows the last frame faintly so you can line things up.</p>
           <p><b>4. Tween.</b> Make two very different frames next to each other, pick the first one and press <b>Tween</b>. Movie Maker draws the in-between frames.</p>
           <p><b>5. Sound.</b> Pick a sound effect for any frame. It plays when that frame appears.</p>
           <p><b>6. Titles.</b> Add a title card and rolling credits, then press <b>Play</b>. Save your movie from the File menu.</p>
+          <p><b>7. Share.</b> Press <b>Share</b> (or File, Share). <i>Share as a video</i> makes a video file with sound that you can save or send. <i>Share a link</i> makes a web link with the whole movie inside it: copy it into an email or a message, and your friend's computer plays it in Movie Maker.</p>
           <p><b>Keys:</b> Left/Right = change frame, Space = play/stop, N = add frame, Delete = remove the picked item, Ctrl+Z = undo.</p>
           <p>Stuck? Open an example movie (File, Example Movies) and see how it was made.</p></div>`, ['Close']);
       }
+
+      /* ----- sharing ----- */
+      const movieName = () => name || movie.title.text || 'My Movie';
+      const canVideo = () => !!(window.MediaRecorder && window.HTMLCanvasElement && HTMLCanvasElement.prototype.captureStream);
+      function pickMime(withAudio) {
+        // MP4 with H.264 plays almost everywhere, so try that first.
+        const L = withAudio ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+          : ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+        try { return L.find(t => MediaRecorder.isTypeSupported(t)) || ''; } catch (e) { return ''; }
+      }
+      let exp = null; // the video being recorded right now
+      function cancelExport() {
+        const E = exp; exp = null; if (!E) return;
+        E.cancelled = true; clearTimeout(E.timer);
+        try { if (E.rec && E.rec.state !== 'inactive') E.rec.stop(); } catch (e) { /* ignore */ }
+        try { E.stream && E.stream.getTracks().forEach(t => t.stop()); } catch (e) { /* ignore */ }
+        try { E.ac && E.ac.close(); } catch (e) { /* ignore */ }
+      }
+      let vidURL = null;
+      const dropURL = () => { if (vidURL) { URL.revokeObjectURL(vidURL); vidURL = null; } };
+      // Plays the movie onto a 640x480 canvas in real time and records it (plus the frame sound effects) with MediaRecorder.
+      async function recordVideo(pv, onProgress, mute) {
+        const c = document.createElement('canvas'); c.width = 640; c.height = 480;
+        const x = c.getContext('2d'), m = movie, S = mkSeq(m);
+        renderAt(x, m, S, 0, 640, 480);
+        const E = exp = { cancelled: false };
+        let ac = null, snd = null;
+        if (!mute) try {
+          const C = window.AudioContext || window.webkitAudioContext;
+          ac = new C(); E.ac = ac;
+          const dest = ac.createMediaStreamDestination();
+          if (ac.state !== 'running') await Promise.race([ac.resume(), new Promise(r => setTimeout(r, 600))]);
+          if (ac.state === 'running') {
+            // Keep a silent signal flowing, or some recorders wait for the first sound effect before writing anything.
+            const hum = ac.createConstantSource ? ac.createConstantSource() : ac.createOscillator(), g = ac.createGain();
+            if (hum.offset) hum.offset.value = 0; g.gain.value = hum.offset ? 1 : 0.00001; hum.connect(g); g.connect(dest); hum.start();
+            snd = { dest, s: synth(ac, dest) };
+          } else { ac.close(); ac = E.ac = null; }
+        } catch (e) { try { ac && ac.close(); } catch (_) { /* ignore */ } ac = E.ac = null; }
+        if (E.cancelled) throw new Error('cancel');
+        const stream = c.captureStream(30); E.stream = stream;
+        if (snd) snd.dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+        const mime = pickMime(!!snd);
+        const rec = E.rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 2500000 });
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        const done = new Promise((res, rej) => { rec.onstop = () => res(); rec.onerror = e => rej(e.error || new Error('recorder')); });
+        if (pv) { const px = pv.getContext('2d'); E.pv = () => px.drawImage(c, 0, 0, pv.width, pv.height); }
+        rec.start(500);
+        const t0 = performance.now(); let lastG = -1;
+        await new Promise(res => {
+          const step = () => {
+            if (E.cancelled) { res(); return; }
+            const t = Math.min(S.total, (performance.now() - t0) / 1000), r = renderAt(x, m, S, t, 640, 480);
+            if (r.g >= 0 && r.g !== lastG) { lastG = r.g; const f = m.frames[r.i]; if (f.snd && snd) playSnd(snd.s, f.snd); }
+            E.pv && E.pv(); onProgress(t / S.total);
+            if (t >= S.total) { res(); return; }
+            E.timer = setTimeout(step, 1000 / 30);
+          };
+          step();
+        });
+        if (E.cancelled) throw new Error('cancel');
+        try { rec.requestData(); } catch (e) { /* ignore */ }
+        rec.stop(); await done;
+        stream.getTracks().forEach(t => t.stop()); try { ac && ac.close(); } catch (e) { /* ignore */ }
+        if (exp === E) exp = null;
+        if (E.cancelled) throw new Error('cancel');
+        const type = (rec.mimeType || mime || 'video/webm').split(';')[0];
+        return { blob: new Blob(chunks, { type }), type, ext: type === 'video/mp4' ? 'mp4' : 'webm', audio: !!snd, secs: S.total };
+      }
+      function shareDlg(tab) {
+        if (playing) stop();
+        sel = null; renderSel();
+        dialog(`Share "${movieName()}"`, `<p style="margin:0">Show your movie to a friend. No sign-up needed.</p>
+          <div class="mvm-shr"><button class="btn" data-t="video">${IC.play}Share as a video</button><button class="btn" data-t="link">${IC.share}Share a link</button></div>
+          <div class="mvm-pane sunken" style="background:#d4d0c8;padding:6px"></div>`, ['Close'], d => {
+          const pane = d.querySelector('.mvm-pane');
+          let tabNow = '';
+          const show = t => {
+            if (exp) return; // finish or cancel the recording first
+            tabNow = t; dropURL();
+            d.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('down', b.dataset.t === t));
+            (t === 'video' ? videoPane : linkPane)(pane, show);
+          };
+          d.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { api.sfx.click(); if (b.dataset.t !== tabNow) show(b.dataset.t); });
+          show(tab || (canVideo() ? 'video' : 'link'));
+          dlgClean = () => { cancelExport(); dropURL(); };
+        });
+      }
+      function videoPane(pane, show) {
+        if (!canVideo()) {
+          pane.innerHTML = `<p>Sorry, this web browser can't make video files. You can still share your movie as a link: your friend opens it and watches it right here in Movie Maker.</p>
+            <div class="mvm-acts"><button class="btn" data-v="link">Share a link instead</button></div>`;
+          pane.querySelector('[data-v]').onclick = () => show('link');
+          return;
+        }
+        const S = mkSeq(movie);
+        pane.innerHTML = `<p>Movie Maker plays your movie and records it as a video file (640 x 480) with the title, the sound effects and the credits. It takes about ${Math.ceil(S.total)} seconds.</p>
+          <div class="mvm-acts"><button class="btn" data-v="go"><b>Make video</b></button></div>`;
+        pane.querySelector('[data-v="go"]').onclick = () => { api.sfx.click(); startVideo(pane, show); };
+      }
+      function startVideo(pane, show, mute) {
+        pane.innerHTML = `<canvas class="mvm-pv" width="192" height="144"></canvas>
+          <div class="mvm-pb sunken"><i></i></div><p class="mvm-vs" aria-live="polite">Recording... 0%</p>
+          <div class="mvm-acts"><button class="btn" data-v="cancel">Cancel</button></div>`;
+        const bar = pane.querySelector('.mvm-pb i'), vs = pane.querySelector('.mvm-vs');
+        pane.querySelector('[data-v="cancel"]').onclick = () => { api.sfx.click(); cancelExport(); videoPane(pane, show); };
+        recordVideo(pane.querySelector('.mvm-pv'), p => { const n = Math.round(p * 100); bar.style.width = n + '%'; vs.textContent = `Recording... ${n}%`; }, mute).then(r => {
+          if (!pane.isConnected) return;
+          if (!r.blob.size) { if (r.audio) { startVideo(pane, show, true); return; } throw new Error('empty'); } // nothing recorded: try once more without sound
+          dropURL(); vidURL = URL.createObjectURL(r.blob);
+          const fn = fileName(movieName()) + '.' + r.ext, file = new File([r.blob], fn, { type: r.type });
+          let canSend = false; try { canSend = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { /* no */ }
+          const mb = r.blob.size / 1048576;
+          pane.innerHTML = `<p><b>Your video is ready!</b> ${api.esc(fn)} (${mb < 0.1 ? Math.max(1, Math.round(r.blob.size / 1024)) + ' KB' : mb.toFixed(1) + ' MB'}, ${Math.round(r.secs)} seconds).</p>
+            ${r.audio ? '' : "<p>This computer couldn't record sound, so the video is silent.</p>"}
+            <div class="mvm-acts">${canSend ? '<button class="btn" data-v="send"><b>Send to a friend...</b></button>' : ''}<a class="btn" data-v="save" href="${vidURL}" download="${api.esc(fn)}">Save video file</a><button class="btn" data-v="again">Make it again</button></div>
+            <p style="color:#444">${canSend ? 'Send it by email or a messaging app, or save the file and send it yourself.' : 'Save the file, then send it to a friend by email or a messaging app.'}</p>`;
+          api.sfx.ding();
+          const send = pane.querySelector('[data-v="send"]');
+          if (send) send.onclick = () => { api.sfx.click(); navigator.share({ files: [file], title: movie.title.text || 'My movie', text: 'I made a cartoon in Movie Maker! Watch it:' }).catch(() => {}); };
+          pane.querySelector('[data-v="save"]').addEventListener('click', () => api.sfx.click());
+          pane.querySelector('[data-v="again"]').onclick = () => { api.sfx.click(); startVideo(pane, show); };
+        }).catch(e => {
+          if (!pane.isConnected || String(e && e.message) === 'cancel') return;
+          pane.innerHTML = `<p>Oops, the video couldn't be made on this computer. Try again, or share a link instead.</p>
+            <div class="mvm-acts"><button class="btn" data-v="again">Try again</button><button class="btn" data-v="link">Share a link</button></div>`;
+          pane.querySelector('[data-v="again"]').onclick = () => startVideo(pane, show);
+          pane.querySelector('[data-v="link"]').onclick = () => show('link');
+        });
+      }
+      function linkBase() { return (location.origin && location.origin !== 'null' ? location.origin : location.protocol + '//') + location.pathname; }
+      function linkPane(pane, show) {
+        pane.innerHTML = '<p>Making your link...</p>';
+        encodeMovie(movie).then(data => {
+          if (!pane.isConnected) return;
+          const url = `${linkBase()}#2000&movie=${data}`, long = url.length > 8000;
+          pane.innerHTML = `<p>Anyone who opens this link sees your movie play in Movie Maker. The whole movie is inside the link, so nothing is uploaded.</p>
+            <textarea class="mvm-link sunken" readonly aria-label="Link to your movie"></textarea>
+            <div class="mvm-acts"><button class="btn" data-l="copy"><b>Copy</b></button>${navigator.share ? '<button class="btn" data-l="send">Send link...</button>' : ''}<span class="mvm-ls" style="align-self:center">${url.length.toLocaleString()} characters</span></div>
+            ${long ? `<p class="mvm-warn">This is a long link. Some email and chat programs cut long links short, and then it won't work. For a long movie, ${canVideo() ? '<a href="#" data-l="video">sharing it as a video</a>' : 'sharing it as a video'} is safer.</p>` : ''}`;
+          const ta = pane.querySelector('.mvm-link'); ta.value = url;
+          ta.addEventListener('focus', () => ta.select());
+          const msg = t => { pane.querySelector('.mvm-ls').textContent = t; };
+          pane.querySelector('[data-l="copy"]').onclick = () => {
+            api.sfx.click();
+            const fallback = () => { ta.focus(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { /* no */ } msg(ok ? 'Copied!' : 'Press Ctrl+C to copy.'); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => msg('Copied! Paste it in an email or a message.'), fallback); else fallback();
+          };
+          const snd = pane.querySelector('[data-l="send"]');
+          if (snd) snd.onclick = () => { api.sfx.click(); navigator.share({ title: movie.title.text || 'My movie', text: 'I made a cartoon in Movie Maker! Watch it here:', url }).catch(() => {}); };
+          const v = pane.querySelector('[data-l="video"]'); if (v) v.onclick = e => { e.preventDefault(); show('video'); };
+        }).catch(() => { if (pane.isConnected) pane.innerHTML = "<p>Oops, the link couldn't be made. Try again.</p>"; });
+      }
+
+      /* ----- shared movie player (opened from a link) ----- */
+      const spEl = $('.mvm-sp');
+      let sp = null;
+      function spStop() { if (sp && sp.raf) { cancelAnimationFrame(sp.raf); sp.raf = 0; } }
+      function spClose() {
+        spStop(); sp = null; spEl.hidden = true; spEl.innerHTML = '';
+        layout(); renderSel();
+      }
+      function spLayout() {
+        if (!sp || !sp.cv) return;
+        const box = spEl.querySelector('.mvm-sps'), aw = box.clientWidth - 4, ah = box.clientHeight - 4;
+        const w = Math.floor(Math.max(120, Math.min(aw, ah * 4 / 3))), h = Math.floor(w * 3 / 4), dpr = Math.min(2, window.devicePixelRatio || 1);
+        sp.cv.style.width = w + 'px'; sp.cv.style.height = h + 'px';
+        const W2 = Math.round(w * dpr), H2 = Math.round(h * dpr);
+        if (sp.cv.width !== W2 || sp.cv.height !== H2) { sp.cv.width = W2; sp.cv.height = H2; }
+        if (!sp.raf) renderAt(sp.ctx, sp.m, sp.S, sp.at || 0, W2, H2);
+      }
+      function spPlay() {
+        if (!sp || !sp.cv) return;
+        spStop(); sp.t0 = performance.now(); sp.lastG = -1; sp.at = 0;
+        spEl.querySelector('.mvm-spm').textContent = 'Now playing...';
+        const tick = now => {
+          if (!sp) return;
+          const t = Math.min(sp.S.total, (now - sp.t0) / 1000), r = renderAt(sp.ctx, sp.m, sp.S, t, sp.cv.width, sp.cv.height);
+          sp.at = t;
+          if (r.g >= 0 && r.g !== sp.lastG) { sp.lastG = r.g; const f = sp.m.frames[r.i]; if (f.snd) playSnd(api, f.snd); }
+          if (t >= sp.S.total) { sp.raf = 0; spEl.querySelector('.mvm-spm').textContent = 'The End. Press Play again to watch it again.'; return; }
+          sp.raf = requestAnimationFrame(tick);
+        };
+        sp.raf = requestAnimationFrame(tick);
+      }
+      function openShared(data) {
+        if (playing) stop();
+        closeDlg(); sel = null;
+        spEl.hidden = false;
+        spEl.innerHTML = '<div class="mvm-cap">Shared Movie</div><div class="mvm-spe sunken">Opening the movie your friend sent...</div>';
+        sp = { m: null };
+        decodeMovie(data).then(m => {
+          api.clearParam('movie');
+          if (!sp) return;
+          cleanMovie(m);
+          sp = { m, S: mkSeq(m), raf: 0, saved: false };
+          spEl.innerHTML = `<div class="mvm-cap">Shared Movie</div><div class="mvm-spt"></div>
+            <div class="mvm-sps sunken"><canvas></canvas></div><div class="mvm-spm" aria-live="polite"></div>
+            <div class="mvm-spb"><button class="btn" data-p="again">${IC.play}Play again</button><button class="btn" data-p="save">Save a copy to my movies</button><button class="btn" data-p="own">Make my own</button></div>`;
+          spEl.querySelector('.mvm-spt').textContent = (m.title.text || 'A movie') + (m.title.sub ? ' - ' + m.title.sub : '');
+          sp.cv = spEl.querySelector('canvas'); sp.ctx = sp.cv.getContext('2d');
+          spLayout(); spPlay(); api.sfx.ding();
+        }).catch(() => {
+          api.clearParam('movie');
+          if (!sp) return;
+          spEl.innerHTML = `<div class="mvm-cap">Shared Movie</div>
+            <div class="mvm-spe sunken"><b>Hmm, this movie link doesn't work.</b><br>It may have been cut short when it was sent, or copied only part of the way. Ask your friend to send it again, or to share it as a video.</div>
+            <div class="mvm-spb"><button class="btn" data-p="own">Make my own movie</button></div>`;
+          api.sfx.beep && api.sfx.beep();
+        });
+      }
+      function spSave() {
+        if (!sp || !sp.m) return;
+        const m = sp.m;
+        askText('Save a Copy', 'Name for this movie:', (m.title.text || 'Shared Movie').slice(0, 24), 24, t => {
+          if (!t) return;
+          const list = listMovies(), i = list.findIndex(x => x.n.toLowerCase() === t.toLowerCase());
+          const put = () => {
+            const l = listMovies(), j = l.findIndex(x => x.n.toLowerCase() === t.toLowerCase()), entry = { n: t, d: Date.now(), m: pack(m) };
+            if (j >= 0) l[j] = entry; else l.push(entry);
+            try { api.save('movies', l); } catch (e) { api.msgBox('Movie Maker', 'The disk is full. Delete an old movie and try again.', ['OK'], 'stop'); return; }
+            api.sfx.floppy ? api.sfx.floppy() : api.sfx.ding();
+            if (sp) { sp.saved = true; spEl.querySelector('.mvm-spm').textContent = `Saved as "${t}". Open it any time from File > Open.`; }
+          };
+          if (i >= 0) { api.msgBox('Save a Copy', `"${list[i].n}" already exists. Replace it?`, ['Yes', 'No'], 'warn').then(r => { if (r === 'Yes') put(); }); return; }
+          if (list.length >= MAXM) { api.msgBox('Movie Maker', `You can keep ${MAXM} movies. Choose Make my own, then File > Open, and delete one to make room.`, ['OK'], 'warn'); return; }
+          put();
+        });
+      }
+      spEl.addEventListener('click', e => {
+        const b = e.target.closest('[data-p]'); if (!b) return;
+        api.sfx.click();
+        if (b.dataset.p === 'again') spPlay(); else if (b.dataset.p === 'save') spSave(); else spClose();
+      });
 
       /* ----- files ----- */
       const listMovies = () => { const l = api.load('movies', []); return Array.isArray(l) ? l : []; };
@@ -944,7 +1338,7 @@
         });
       }
       function load(m, n, at = 0) {
-        stop(); movie = m; name = n; cur = clamp(at, 0, movie.frames.length - 1); sel = null; undoStack = []; dirty = false;
+        stop(); if (sp) spClose(); movie = m; name = n; cur = clamp(at, 0, movie.frames.length - 1); sel = null; undoStack = []; dirty = false;
         syncControls(); renderStrip(); layout(); renderSel(); setTitle(); saveDraft();
       }
       function newFile() { confirmLose().then(ok => { if (!ok) return; load(newMovie(api.user), null); status('New movie. Add frames and start animating!'); }); }
@@ -1019,6 +1413,8 @@
           '-',
           { label: 'Example Movies...', fn: () => openDlg(true) },
           '-',
+          { label: 'Share...', fn: () => { if (!sp) shareDlg(); } },
+          '-',
           { label: 'Exit', fn: () => api.close() }
         ] },
         { label: 'Edit', items: () => [
@@ -1051,7 +1447,7 @@
       $('.mvm-tb').addEventListener('click', e => {
         const b = e.target.closest('[data-a]'); if (!b) return;
         const a = b.dataset.a;
-        if (a === 'add') addFrame(false); else if (a === 'tween') tweenDlg(); else if (a === 'play') play();
+        if (a === 'add') addFrame(false); else if (a === 'tween') tweenDlg(); else if (a === 'play') play(); else if (a === 'share') { api.sfx.click(); shareDlg(); }
       });
       $('.mvm-side').addEventListener('click', e => {
         const b = e.target.closest('[data-add],[data-a]'); if (!b) return;
@@ -1069,11 +1465,12 @@
       $('.mvm-fpsr').addEventListener('input', e => setFps(+e.target.value));
       $('.mvm-loop').addEventListener('change', e => { movie.loop = e.target.checked; touch(); });
       $('.mvm-onion').addEventListener('change', e => { onion = e.target.checked; api.save('onion', onion); draw(); });
-      $('.mvm-bg').addEventListener('change', e => { if (playing) stop(); pushUndo(); movie.bg = e.target.value; renderStrip(); draw(); touch(); });
+      $('.mvm-bg').addEventListener('change', e => { if (playing) stop(); setBg(e.target.value); });
       $('.mvm-snd').addEventListener('change', e => { if (playing) return; pushUndo(); frame().snd = e.target.value; playSnd(api, e.target.value); queueThumb(); touch(); });
 
       W.onKey = e => {
         if (dlgKey) { dlgKey(e); return; }
+        if (sp) { if (e.key === 'Escape') { e.preventDefault(); spClose(); } else if (e.key === ' ' && sp.cv && e.target.tagName !== 'BUTTON') { e.preventDefault(); spPlay(); } return; }
         const tg = e.target && e.target.tagName;
         if (tg === 'INPUT' && e.target.type === 'text' || tg === 'TEXTAREA' || tg === 'SELECT') return;
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
@@ -1089,8 +1486,8 @@
         else if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) tweenDlg();
       };
       W.onResize = () => layout();
-      W.onMin = () => stop();
-      W.onClose = () => { stop(); clearTimeout(statusT); if (thumbT) cancelAnimationFrame(thumbT); saveDraft(); };
+      W.onMin = () => { stop(); spStop(); };
+      W.onClose = () => { stop(); spStop(); sp = null; runClean(); cancelExport(); dropURL(); clearTimeout(statusT); if (thumbT) cancelAnimationFrame(thumbT); saveDraft(); };
       let ro = null;
       if (window.ResizeObserver) { ro = new ResizeObserver(() => layout()); ro.observe(sw); ro.observe(W.body); }
       const oc = W.onClose; W.onClose = () => { ro && ro.disconnect(); return oc(); };
@@ -1101,6 +1498,9 @@
       if (dr && dr.m) { load(unpack(dr.m), dr.n || null, dr.at || 0); dirty = !!dr.d; setTitle(); }
       else { load(newMovie(api.user), null); if (!listMovies().length) setTimeout(() => status('Welcome! Try File > Example Movies, or pose the figure and press Add frame.'), 50); }
       requestAnimationFrame(layout);
+      // A friend's link (#2000&movie=...): show it in the player on top of the editor.
+      const shared = api.param && api.param('movie');
+      if (shared) openShared(shared);
     }
   });
 })();
