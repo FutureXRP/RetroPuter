@@ -55,7 +55,7 @@
 
   /* ---------- model ---------- */
   const mkFig = (id, c, x, y, pose) => ({ id, c, x, y, a: (Array.isArray(pose) ? pose : POSE[pose || 'stand']).slice() });
-  const mkProp = (id, k, x, y, o = {}) => ({ id, k, x, y, s: o.s || 1, c: o.c ?? PROPC0[k], t: o.t || '' });
+  const mkProp = (id, k, x, y, o = {}) => ({ id, k, x, y, s: o.s || 1, c: o.c ?? PROPC0[k], t: o.t || '', a: o.a || 0 });
   const cloneFrame = fr => ({ snd: fr.snd || '', figs: fr.figs.map(g => ({ ...g, a: g.a.slice() })), props: fr.props.map(p => ({ ...p })) });
   function newMovie(user) {
     return {
@@ -73,7 +73,7 @@
       c: [m.credits.on ? 1 : 0, m.credits.text, m.credits.font],
       f: m.frames.map(fr => [fr.snd || 0,
         fr.figs.map(g => [g.id, g.c, r0(g.x), r0(g.y), ...g.a.map(r0)]),
-        fr.props.map(p => { const a = [p.id, p.k, r0(p.x), r0(p.y), r0(p.s * 10), p.c]; if (p.k === 5) a.push(p.t); return a; })])
+        fr.props.map(p => { const a = [p.id, p.k, r0(p.x), r0(p.y), r0(p.s * 10), p.c]; if (p.k === 5 || p.a) a.push(p.k === 5 ? p.t : ''); if (p.a) a.push(r0(p.a)); return a; })])
     };
   }
   function unpack(d) {
@@ -87,7 +87,7 @@
     m.frames = d.f.slice(0, MAXF).map(fr => ({
       snd: SOUNDS.some(s => s[0] === fr[0]) ? fr[0] : '',
       figs: (fr[1] || []).slice(0, MAXFIG).map(g => { top = Math.max(top, g[0]); return { id: g[0], c: clamp(g[1] | 0, 0, FIGC.length - 1), x: +g[2], y: +g[3], a: g.slice(4, 14).map(Number) }; }).filter(g => g.a.length === 10),
-      props: (fr[2] || []).slice(0, MAXPROP).map(p => { top = Math.max(top, p[0]); return { id: p[0], k: clamp(p[1] | 0, 0, 5), x: +p[2], y: +p[3], s: clamp((+p[4] || 10) / 10, 0.4, 3), c: clamp(p[5] | 0, 0, PROPC.length - 1), t: String(p[6] || '') }; })
+      props: (fr[2] || []).slice(0, MAXPROP).map(p => { top = Math.max(top, p[0]); return { id: p[0], k: clamp(p[1] | 0, 0, 5), x: +p[2], y: +p[3], s: clamp((+p[4] || 10) / 10, 0.4, 3), c: clamp(p[5] | 0, 0, PROPC.length - 1), t: String(p[6] || ''), a: norm(+p[7] || 0) }; })
     }));
     m.nid = Math.max(+d.i || 0, top + 1);
     return m;
@@ -102,7 +102,7 @@
     for (let k = 1; k <= n; k++) {
       const t = k / (n + 1), fr = cloneFrame(A); fr.snd = '';
       fr.figs.forEach(g => { const h = B.figs.find(x => x.id === g.id); if (!h) return; g.x = lerp(g.x, h.x, t); g.y = lerp(g.y, h.y, t); g.a = g.a.map((a, i) => norm(lerpA(a, h.a[i], t))); });
-      fr.props.forEach(p => { const q = B.props.find(x => x.id === p.id); if (!q) return; p.x = lerp(p.x, q.x, t); p.y = lerp(p.y, q.y, t); p.s = lerp(p.s, q.s, t); });
+      fr.props.forEach(p => { const q = B.props.find(x => x.id === p.id); if (!q) return; p.x = lerp(p.x, q.x, t); p.y = lerp(p.y, q.y, t); p.s = lerp(p.s, q.s, t); p.a = norm(lerpA(p.a || 0, q.a || 0, t)); });
       out.push(fr);
     }
     return out;
@@ -123,8 +123,13 @@
     let b;
     if (p.k === 5) { const L = bubbleLines(p.t); b = [-L.w / 2, -L.h / 2, L.w / 2, L.h / 2 + 9]; }
     else b = [[-9, -9, 9, 9], [-12, -15, 12, 3], [-10, -12, 10, 34], [-19, -4, 19, 5], [-12, -12, 12, 12]][p.k];
-    return [p.x + b[0] * p.s, p.y + b[1] * p.s, p.x + b[2] * p.s, p.y + b[3] * p.s];
+    if (!p.a) return [p.x + b[0] * p.s, p.y + b[1] * p.s, p.x + b[2] * p.s, p.y + b[3] * p.s];
+    const r = p.a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+    const pts = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => [p.x + (x * c - y * sn) * p.s, p.y + (x * sn + y * c) * p.s]);
+    return [Math.min(...pts.map(q => q[0])), Math.min(...pts.map(q => q[1])), Math.max(...pts.map(q => q[0])), Math.max(...pts.map(q => q[1]))];
   }
+  // The round rotate handle sits just above a selected prop's box.
+  const rotHandle = p => { const b = propBox(p); return [(b[0] + b[2]) / 2, b[1] - 14]; };
   function star(ctx, x, y, ro, ri, n = 5) {
     ctx.beginPath();
     for (let i = 0; i < n * 2; i++) { const r = i % 2 ? ri : ro, a = -Math.PI / 2 + i * Math.PI / n; ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); }
@@ -249,7 +254,7 @@
   }
   function drawProp(ctx, p) {
     const c = PROPC[p.c];
-    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.s, p.s);
+    ctx.save(); ctx.translate(p.x, p.y); if (p.a) ctx.rotate(p.a * Math.PI / 180); ctx.scale(p.s, p.s);
     ctx.lineWidth = 0.9; ctx.strokeStyle = '#000'; ctx.lineCap = 'round';
     if (p.k === 0) {
       ell(ctx, 0, 0, 8.5, 8.5, c); ctx.stroke();
@@ -609,7 +614,8 @@
         ctx.globalAlpha = 1;
         if (sel && sel.t === 'prop') {
           const p = fr.props.find(q => q.id === sel.id);
-          if (p) { const b = propBox(p); ctx.setLineDash([3 / pxu, 2 / pxu]); ctx.strokeStyle = '#000'; ctx.lineWidth = 1 / pxu; ctx.strokeRect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4); ctx.strokeStyle = '#fff'; ctx.lineDashOffset = 2.5 / pxu; ctx.strokeRect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4); ctx.setLineDash([]); ctx.lineDashOffset = 0; }
+          if (p) { const b = propBox(p); ctx.setLineDash([3 / pxu, 2 / pxu]); ctx.strokeStyle = '#000'; ctx.lineWidth = 1 / pxu; ctx.strokeRect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4); ctx.strokeStyle = '#fff'; ctx.lineDashOffset = 2.5 / pxu; ctx.strokeRect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+            const h = rotHandle(p), rr = (coarse ? 6.5 : 4.5) / Math.max(0.6, pxu / 2); ctx.strokeStyle = '#000'; ctx.lineWidth = 1 / pxu; ctx.beginPath(); ctx.moveTo(h[0], b[1] - 2); ctx.lineTo(h[0], h[1] + rr); ctx.stroke(); ctx.beginPath(); ctx.arc(h[0], h[1], rr, 0, Math.PI * 2); ctx.fillStyle = '#ffd400'; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(h[0], h[1], rr * 0.5, -2.2, 1.3); ctx.stroke(); }
         }
         badge.textContent = `Frame ${cur + 1}/${movie.frames.length}`;
         queueThumb();
@@ -758,7 +764,7 @@
             <span class="mvm-hint">${api.esc(statusMsg)}</span>`;
         } else {
           selBar.innerHTML = `<b><span class="mvm-sw2" style="background:${PROPC[it.c]}"></span>${PROPN[it.k]}</b>
-            <button class="btn mvm-b" data-s="color">Color</button><button class="btn mvm-b" data-s="small" aria-label="Smaller">Smaller</button><button class="btn mvm-b" data-s="big" aria-label="Bigger">Bigger</button>${it.k === 5 ? '<button class="btn mvm-b" data-s="text">Text...</button>' : ''}<button class="btn mvm-b" data-s="rm">Remove</button>
+            <button class="btn mvm-b" data-s="color">Color</button><button class="btn mvm-b" data-s="small" aria-label="Smaller">Smaller</button><button class="btn mvm-b" data-s="big" aria-label="Bigger">Bigger</button><button class="btn mvm-b" data-s="rotl" aria-label="Tilt left">&#10226; Tilt</button><button class="btn mvm-b" data-s="rotr" aria-label="Tilt right">Tilt &#10227;</button>${it.a ? '<button class="btn mvm-b" data-s="rot0">Straighten</button>' : ''}${it.k === 5 ? '<button class="btn mvm-b" data-s="text">Text...</button>' : ''}<button class="btn mvm-b" data-s="rm">Remove</button>
             <span class="mvm-hint">${api.esc(statusMsg)}</span>`;
         }
       }
@@ -771,6 +777,9 @@
         else if (s === 'pose') editSel(g => { g.a = POSE.stand.slice(); });
         else if (s === 'small') editSel(p => { p.s = Math.max(0.5, +(p.s - 0.25).toFixed(2)); });
         else if (s === 'big') editSel(p => { p.s = Math.min(2.5, +(p.s + 0.25).toFixed(2)); });
+        else if (s === 'rotl') editSel(p => { p.a = norm((p.a || 0) - 15); });
+        else if (s === 'rotr') editSel(p => { p.a = norm((p.a || 0) + 15); });
+        else if (s === 'rot0') editSel(p => { p.a = 0; });
         else if (s === 'text') { const it = findSel(); askText('Speech bubble', 'What does it say?', it.t, 40, t => { if (t) editSel(p => { p.t = t; }, true); }); }
       });
 
@@ -779,6 +788,7 @@
       function hitTest(pt) {
         const fr = frame(), pxu = cv.getBoundingClientRect().width / VW || 1, hr = (coarse ? 18 : 10) / pxu;
         const figs = fr.figs.slice().reverse().sort((a, b) => (sel && sel.id === b.id ? 1 : 0) - (sel && sel.id === a.id ? 1 : 0));
+        if (sel && sel.t === 'prop') { const sp = fr.props.find(q => q.id === sel.id); if (sp) { const h = rotHandle(sp); if (Math.hypot(h[0] - pt[0], h[1] - pt[1]) < hr + 2) return { t: 'prop', id: sp.id, rot: true }; } }
         let best = null;
         figs.forEach(g => { joints(g).forEach((p, j) => { const d = Math.hypot(p[0] - pt[0], p[1] - pt[1]) - (j === 0 ? 1.5 / pxu : 0); if (d < hr && (!best || d < best.d - 0.01)) best = { t: 'fig', id: g.id, j, d }; }); });
         if (best) return best;
@@ -808,7 +818,11 @@
         if (!drag || e.pointerId !== drag.pid) return;
         const pt = toV(e), it = findSel(); if (!it) return;
         if (!drag.pushed) { if (Math.hypot(pt[0] - drag.sx, pt[1] - drag.sy) < 0.8) return; pushUndo(); drag.pushed = true; }
-        if (drag.hit.t === 'prop' || drag.hit.j === 0) {
+        if (drag.hit.rot) {
+          // Angle from the prop's center to the pointer; snaps to the nearest 15 degrees when close, for neat angles.
+          let a = Math.atan2(pt[1] - it.y, pt[0] - it.x) / RAD + 90, snap = Math.round(a / 15) * 15;
+          if (Math.abs(a - snap) < 4) a = snap; it.a = norm(Math.round(a));
+        } else if (drag.hit.t === 'prop' || drag.hit.j === 0) {
           it.x = clamp(pt[0] - drag.dx, -10, VW + 10); it.y = clamp(pt[1] - drag.dy, -10, VH + 10);
         } else {
           const j = drag.hit.j, P = joints(it), par = P[PAR[j]];
@@ -821,7 +835,7 @@
         if (!drag || e.pointerId !== drag.pid) return;
         cv.classList.remove('grab');
         if (drag.pushed) touch();
-        drag = null; draw();
+        const wasRot = drag.hit.rot; drag = null; draw(); if (wasRot) renderSel();
       };
       cv.addEventListener('pointerup', endDrag);
       cv.addEventListener('pointercancel', endDrag);
@@ -911,7 +925,7 @@
       function helpDlg() {
         dialog('How to use Movie Maker', `<div class="mvm-help">
           <p><b>1. Set the scene.</b> Pick a background under Scene. Add stick figures (up to 3) and props from the Cast.</p>
-          <p><b>2. Pose.</b> Drag the white dots to bend heads, arms and legs. Drag the red hip dot (or a limb) to move the whole figure. Drag props to move them.</p>
+          <p><b>2. Pose.</b> Drag the white dots to bend heads, arms and legs. Drag the red hip dot (or a limb) to move the whole figure. Drag props to move them. To tilt a prop (like an angled skateboard), drag its round yellow handle, or use the Tilt buttons or the [ and ] keys.</p>
           <p><b>3. Animate.</b> Press <b>Add frame</b> to copy this frame, then change the pose a little. Onion skin shows the last frame faintly so you can line things up.</p>
           <p><b>4. Tween.</b> Make two very different frames next to each other, pick the first one and press <b>Tween</b>. Movie Maker draws the in-between frames.</p>
           <p><b>5. Sound.</b> Pick a sound effect for any frame. It plays when that frame appears.</p>
@@ -1067,6 +1081,7 @@
         if (e.key === ' ') { e.preventDefault(); play(); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); if (playing) stop(); go(cur - 1, true); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); if (playing) stop(); go(cur + 1, true); }
+        else if ((e.key === '[' || e.key === ']') && sel && sel.t === 'prop') { e.preventDefault(); const d = e.key === '[' ? -15 : 15; editSel(p => { p.a = norm((p.a || 0) + d); }); }
         else if (e.key === 'Home') go(0, true);
         else if (e.key === 'End') go(movie.frames.length - 1, true);
         else if (e.key === 'Delete' || e.key === 'Backspace') { if (sel) { e.preventDefault(); removeSel(); } }
