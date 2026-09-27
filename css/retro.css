@@ -807,3 +807,5 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .bk-code textarea{width:100%;box-sizing:border-box;font:11px monospace;word-break:break-all;margin-top:4px}
 .era-1985 .bk small{color:var(--phos,#33ff66)}
 .era-1985 .bk-code textarea{background:#000;color:var(--phos,#33ff66);border:1px solid var(--phos,#33ff66)}
+.pw-shared{display:inline-block;margin-bottom:6px;color:#ffff66;animation:blink 1.4s steps(1) infinite}
+@media (prefers-reduced-motion: reduce){.pw-shared{animation:none}}

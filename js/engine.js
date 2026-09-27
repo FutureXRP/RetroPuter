@@ -2631,6 +2631,10 @@ function setEra(id) {
 function renderPower() {
   $('#pw-head').innerHTML = `It's ${era.year}.<br>The computer is off.`;
   $('#pw-blurb').textContent = era.power;
+  // Arriving from a shared link: say what's waiting. The Power on tap is still needed (browsers only allow sound after a tap).
+  const shared = HASH.movie && !HASH.movieOpened ? (era.id === '2000' ? 'Someone shared a movie with you! Press Power on and it will play in Movie Maker.' : 'Someone shared a movie with you! Pick 2000, then press Power on to watch it.')
+    : HASH.page && !HASH.opened && era.apps.includes('nv') ? 'Someone shared a home page with you! Press Power on to see it.' : '';
+  if (shared) $('#pw-blurb').innerHTML = `<b class="pw-shared">${esc(shared)}</b><br>${esc(era.power)}`;
   const box = $('#pw-eras'); box.innerHTML = '';
   ERA_IDS.forEach(id => {
     const E = ERAS[id], b = document.createElement('button');
