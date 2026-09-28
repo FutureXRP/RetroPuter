@@ -851,3 +851,13 @@ input[type=text],input[type=password],textarea,select{font:inherit;background:#f
 .dpa-narrow .dpa-art{min-height:78px;padding:6px 10px}.dpa-narrow .dpa-big{font-size:22px}.dpa-narrow .dpa-art span{font-size:14px}
 @media (prefers-reduced-motion: reduce){.dpa,.dpa-btn,.dpa-shoe{animation:none;transition:none}}
 .era-1985 .dpa{bottom:64px}.era-1985 .dpa-narrow{bottom:52px}
+
+/* ---- privacy notice banner (first visit) ---- */
+#consent{position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gray,#c0c0c0);color:#000;border:3px solid;border-color:#fff #404040 #404040 #fff;box-shadow:4px 4px 0 rgba(0,0,0,.45);padding:10px 12px;font:13px/1.4 Tahoma,Verdana,sans-serif}
+#consent p{flex:1 1 320px;margin:0}
+#consent b{color:#000080}
+#consent a{color:#0000ee}
+#consent div{display:flex;gap:6px;flex-wrap:wrap}
+#consent .btn{min-width:80px;padding:4px 12px}
+.pw-links{display:block;margin-top:6px;opacity:.85}
+.pw-links a{color:inherit}
