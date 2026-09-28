@@ -1790,7 +1790,7 @@ function openSettings() {
       <fieldset><legend>Screen saver</legend><div class="ss-row"><select data-sk aria-label="Screen saver"><option value="">(None)</option>${saversFor().map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select><button class="btn" data-sp>Preview</button></div><label class="ss-row">Wait <select data-sw aria-label="Minutes before the screen saver starts">${[1, 2, 3, 5, 10, 15].map(m => `<option value="${m}">${m}</option>`).join('')}</select> minute(s)</label><label class="ss-row" data-smsg>Message <input type="text" maxlength="40" data-st aria-label="Scrolling message text"></label></fieldset>
       <fieldset><legend>Desktop color</legend><div class="sws"></div></fieldset>
       <fieldset><legend>Time machine</legend><button class="btn" data-tw>Travel to another year…</button></fieldset>
-      <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button>${tester() ? '<button class="btn" data-tester>Leave tester mode…</button>' : ''}</div></fieldset>
+      <fieldset><legend>Saving</legend><small>Everything saves automatically in this browser.</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-bk>Backup &amp; restore…</button><button class="btn" data-erase>Erase hard drive…</button><a class="btn" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none;color:#000">Privacy policy</a>${tester() ? '<button class="btn" data-tester>Leave tester mode…</button>' : ''}</div></fieldset>
       <div style="text-align:right"><button class="btn" data-ok>OK</button></div></div>`;
     const b = W.body;
     const vol = b.querySelector('[data-vol]'); vol.value = settings.vol;
@@ -2757,6 +2757,23 @@ const AD = (() => { const list = (window.RETRO_ADS || []).filter(a => a && a.hre
 // Google AdSense in the desk banner, only when js/ads.js has both IDs filled in (window.RETRO_ADSENSE).
 const ADSENSE = (() => { const g = window.RETRO_ADSENSE || {}; return /^ca-pub-\d{10,}$/.test(g.client || '') && /^\d{6,}$/.test(String(g.slot || '')) ? g : null; })();
 let adsenseDone = false;
+/* Cookie / storage notice. RetroPuter itself only uses local storage to save progress (needed for the site to work).
+   Google ads load only after the visitor allows ad cookies. For visitors in the EEA/UK, also turn on Google's certified
+   consent message in AdSense (Privacy & messaging); this banner doesn't replace it. */
+const consent = () => store.get('consent', {});
+function consentBanner() {
+  if (consent().v) return;
+  const b = document.createElement('div'); b.id = 'consent'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Privacy notice');
+  b.innerHTML = ADSENSE
+    ? `<p><b>Cookies?</b> RetroPuter saves your games in this browser only. No accounts. We'd also like to show ads from Google, which use cookies (non-personalized, kid-safe settings). <a href="privacy.html">Privacy policy</a></p><div><button class="btn" data-c="yes">Allow ad cookies</button><button class="btn" data-c="no">Only what's needed</button></div>`
+    : `<p><b>Heads up!</b> RetroPuter saves your games and progress in this browser only. No accounts, no tracking. <a href="privacy.html">Privacy policy</a></p><div><button class="btn" data-c="no">OK</button></div>`;
+  document.body.appendChild(b);
+  b.addEventListener('click', e => {
+    const c = e.target.closest('[data-c]'); if (!c) return;
+    store.set('consent', { v: 1, ads: c.dataset.c, t: Date.now() }); b.remove(); sfx.click();
+    if (c.dataset.c === 'yes' && roomOn) layoutRoom();
+  });
+}
 function placeAdsense(el, w, h) {
   if (adsenseDone) return; adsenseDone = true;
   el.querySelector('.rm-ad-box').hidden = true;
@@ -2771,7 +2788,7 @@ function placeAdsense(el, w, h) {
 }
 function placeAd(size, x, y) {
   const el = room.querySelector('.rm-ad');
-  if (size && ADSENSE) { el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px'; placeAdsense(el, size[0], size[1]); return; }
+  if (size && ADSENSE && consent().ads === 'yes') { el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px'; placeAdsense(el, size[0], size[1]); return; }
   if (!size || !AD) { el.hidden = true; return; }
   const [w, h] = size, key = w + 'x' + h;
   el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
@@ -3025,6 +3042,7 @@ if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
 
 /* ---------- start ---------- */
 initRoom();
+consentBanner();
 setEra(ERAS[HASH.era] ? HASH.era : store.get('era', ERAS['1990'] ? '1990' : ERA_IDS[0]));
 renderPower();
 })();

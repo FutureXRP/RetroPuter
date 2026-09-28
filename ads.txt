@@ -1,0 +1,4 @@
+# ads.txt for RetroPuter: lists who is allowed to sell ads on this site (https://iabtechlab.com/ads-txt/).
+# When your Google AdSense account is approved, replace pub-0000000000000000 below with your publisher ID
+# (it's the number in your AdSense client ID "ca-pub-XXXXXXXXXXXXXXXX", without the "ca-") and remove the # at the start of the line.
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
