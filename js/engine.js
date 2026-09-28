@@ -2688,7 +2688,7 @@ function teardown() {
   if (call) { call.cancel(); call = null; }
   if (net.connected) hangUp();
   net.dropped = false;
-  stopMusic(); wake(); closeMenu(); closeStart(); closeTW(); closeAll();
+  stopMusic(); wake(); closeMenu(); closeStart(); closeTW(); closeAll(); hidePopAd();
   $$('#deskicons, #dos').forEach(x => x.remove()); dos = null;
   document.body.classList.remove('wait');
   visited.clear();
@@ -2754,8 +2754,24 @@ function layoutRoom() {
 }
 /* The desk's ad slot. Ads come from js/ads.js (window.RETRO_ADS); one is chosen per visit. */
 const AD = (() => { const list = (window.RETRO_ADS || []).filter(a => a && a.href && a.html && a.active !== false); return list.length ? list[Math.random() * list.length | 0] : null; })();
+// Google AdSense in the desk banner, only when js/ads.js has both IDs filled in (window.RETRO_ADSENSE).
+const ADSENSE = (() => { const g = window.RETRO_ADSENSE || {}; return /^ca-pub-\d{10,}$/.test(g.client || '') && /^\d{6,}$/.test(String(g.slot || '')) ? g : null; })();
+let adsenseDone = false;
+function placeAdsense(el, w, h) {
+  if (adsenseDone) return; adsenseDone = true;
+  el.querySelector('.rm-ad-box').hidden = true;
+  const ins = document.createElement('ins'); ins.className = 'adsbygoogle rm-ad-g';
+  Object.assign(ins.style, { display: 'inline-block', width: w + 'px', height: h + 'px' });
+  ins.setAttribute('data-ad-client', ADSENSE.client); ins.setAttribute('data-ad-slot', String(ADSENSE.slot));
+  el.appendChild(ins);
+  window.adsbygoogle = window.adsbygoogle || []; window.adsbygoogle.requestNonPersonalizedAds = 1; // kids use this site: no personalized ads
+  const sc = document.createElement('script'); sc.async = true; sc.crossOrigin = 'anonymous';
+  sc.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADSENSE.client);
+  document.head.appendChild(sc); try { window.adsbygoogle.push({}); } catch (e) {}
+}
 function placeAd(size, x, y) {
   const el = room.querySelector('.rm-ad');
+  if (size && ADSENSE) { el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px'; placeAdsense(el, size[0], size[1]); return; }
   if (!size || !AD) { el.hidden = true; return; }
   const [w, h] = size, key = w + 'x' + h;
   el.hidden = false; el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
@@ -2822,6 +2838,40 @@ function initRoom() {
   window.addEventListener('resize', () => { if (roomOn) layoutRoom(); });
   enterRoom();
 }
+
+/* ---------- desktop pop-up ads (js/ads.js: window.RETRO_POPUP_ADS) ----------
+   One appears after 15-20 minutes of active desktop time, then again every 15-20 minutes, and stays 15-30 seconds.
+   Only desktop time counts (not boot, a hidden tab or the screen saver). Close unlocks after a few seconds. */
+const POPAD = { everyMin: [15, 20], showSec: [15, 30], closeAfterSec: 5 };
+const randIn = ([a, b]) => a + Math.random() * (b - a);
+let popActive = 0, popNext = randIn(POPAD.everyMin) * 60000, popEl = null, popLast = '';
+setInterval(() => {
+  if (!booted || !stageOn('st-desk') || document.hidden || saverOn || popEl) return;
+  popActive += 1000;
+  if (popActive >= popNext) { popActive = 0; popNext = randIn(POPAD.everyMin) * 60000; showPopAd(); }
+}, 1000);
+function showPopAd(forceId) {
+  const list = (window.RETRO_POPUP_ADS || []).filter(a => a && a.html && a.href && a.active !== false);
+  if (!list.length || popEl || !booted) return;
+  const pool = list.length > 1 ? list.filter(a => a.id !== popLast) : list;
+  const ad = (forceId && list.find(a => a.id === forceId)) || pool[Math.random() * pool.length | 0]; popLast = ad.id;
+  const secs = Math.round(randIn(POPAD.showSec)), narrow = (layer.clientWidth || innerWidth) < 600;
+  const el = document.createElement('div'); el.className = 'dpa' + (narrow ? ' dpa-narrow' : ''); el.setAttribute('role', 'complementary'); el.setAttribute('aria-label', 'Advertisement: ' + ad.label);
+  el.innerHTML = `<div class="dpa-tb"><span>Advertisement${ad.sample ? ' (sample)' : ''}</span><button class="dpa-x" disabled aria-label="Close ad">${POPAD.closeAfterSec}</button></div>
+    <a class="dpa-body ad-${esc(ad.id)}" href="${esc(ad.href)}"${ad.newTab !== false ? ' target="_blank" rel="sponsored noopener"' : ' rel="sponsored"'}></a><div class="dpa-bar"><i></i></div>`;
+  el.querySelector('.dpa-body').innerHTML = ad.html({ id: era.id, year: era.year });
+  layer.appendChild(el); popEl = el;
+  requestAnimationFrame(() => el.classList.add('on'));
+  const x = el.querySelector('.dpa-x'), bar = el.querySelector('.dpa-bar i'), t0 = Date.now();
+  bar.style.transition = `width ${secs}s linear`; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = '0%'; }));
+  let left = POPAD.closeAfterSec;
+  const tick = setInterval(() => { left--; if (left > 0) x.textContent = left; else { x.textContent = '×'; x.disabled = false; clearInterval(tick); } }, 1000);
+  const done = setTimeout(close, secs * 1000);
+  function close() { clearInterval(tick); clearTimeout(done); if (!popEl) return; el.classList.remove('on'); setTimeout(() => el.remove(), 300); popEl = null; }
+  x.onclick = () => { if (!x.disabled) { sfx.click(); close(); } };
+  el.close = close;
+}
+function hidePopAd() { if (popEl && popEl.close) popEl.close(); }
 
 /* ---------- startup sponsor: a short, skippable "brought to you by" screen at the first boot of a visit ---------- */
 // The sponsor comes from js/ads.js (window.RETRO_SPONSOR). It plays every time a computer starts, including
@@ -2968,6 +3018,7 @@ if (/[?&]dev\b/.test(location.search)) window.RetroPuter = {
   launch: id => launchApp(id), openApp, apps: () => apps().map(a => a.id), plugins: PLUGINS,
   own: id => { store.set('owned', [...new Set([...owned(), id])]); refreshShell(); }, cash: v => setWallet(v), wallet,
   desk: () => { if (!booted) { if (!stageOn('st-bios') && !stageOn('st-splash')) boot(); skipping = true; toDesktop(true); } },
+  popAd: id => showPopAd(id),
   audio: () => (ac ? ac.state : 'none'), audioSuspend: () => ac && ac.suspend(),
   era: () => era.id, switchEra, connect: () => { net.connected = true; refreshTray(); Object.values(wins).forEach(W => W.onNet && W.onNet()); }
 };
