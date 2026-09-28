@@ -67,3 +67,28 @@ window.RETRO_SPONSOR = window.RETRO_SPONSOR || {
     <span class="pzs-line">${era.year < 1995 ? 'The official soda of late-night typing!' : era.year < 2000 ? 'Totally fizzy. Totally zero.' : 'The soda of the new millennium!'}</span>
     <span class="pzs-btn">CLICK FOR A FIZZY SURPRISE &gt;&gt;</span>`
 };
+
+/* ---- Desktop pop-up ads ----
+   Shown on the desktop every 15-20 minutes of active use, for 15-30 seconds (timing lives in js/engine.js, POPAD).
+   Each: { id, label, href, newTab, sample, html(era) }. `era` is { id, year }; make it look like that year.
+   These are SAMPLE ads (made-up brands) until real advertisers are booked. Replace or add entries here. */
+const pa = (cls, body) => `<div class="dpa-art ${cls}">${body}</div>`;
+window.RETRO_POPUP_ADS = window.RETRO_POPUP_ADS || [
+  { id: 'popzero', label: 'Pop Zero soda', href: 'popzero.html', newTab: false, sample: true,
+    html: e => pa('dpa-pz', `${popStars(8)}${popCan(64, 'pz-can')}<div><b class="dpa-big">POP ZERO</b><span>Zero sugar. Mega fizz!</span><span class="dpa-btn">GET FIZZY &gt;&gt;</span></div>`) },
+  { id: 'crunch', label: 'Cosmic Crunch cereal', href: 'advertise.html', newTab: false, sample: true,
+    html: e => pa('dpa-cc', `<div class="dpa-bowl"><i></i><i></i><i></i><i></i><i></i></div><div><b class="dpa-big">COSMIC CRUNCH</b><span>Star-shaped crunch in every bite!</span><span class="dpa-btn">PART OF A COMPLETE BREAKFAST</span></div>`) },
+  { id: 'zoom', label: 'Zoomers sneakers', href: 'advertise.html', newTab: false, sample: true,
+    html: e => pa('dpa-zm', `<div class="dpa-shoe"></div><div><b class="dpa-big">ZOOMERS</b><span>Light-up sneakers. Run like lightning!</span><span class="dpa-btn">${e.year < 1995 ? 'AT A MALL NEAR YOU' : 'CLICK TO SEE ALL COLORS'}</span></div>`) },
+  { id: 'pizza', label: 'MegaByte Pizza', href: 'advertise.html', newTab: false, sample: true,
+    html: e => pa('dpa-mb', `<div class="dpa-pie"></div><div><b class="dpa-big">MEGABYTE PIZZA</b><span>${e.year >= 2000 ? 'Now order online! 30 minutes or it\'s free.' : 'Call 555-PIZZA. Hot to your door!'}</span><span class="dpa-btn">EXTRA CHEESE, NO EXTRA CHARGE</span></div>`) },
+  { id: 'pals', label: 'Pixel Pals toys', href: 'advertise.html', newTab: false, sample: true,
+    html: e => pa('dpa-pp', `<div class="dpa-pal"><i></i></div><div><b class="dpa-big">PIXEL PALS</b><span>The pocket pet that beeps when it's hungry!</span><span class="dpa-btn">COLLECT ALL 6!</span></div>`) },
+  { id: 'arcade', label: 'Starlight Arcade', href: 'advertise.html', newTab: false, sample: true,
+    html: e => pa('dpa-sa', `<div class="dpa-cab"></div><div><b class="dpa-big">STARLIGHT ARCADE</b><span>100 games. Free tokens every Tuesday!</span><span class="dpa-btn">SEE YOU AT THE MALL</span></div>`) }
+];
+
+/* Google AdSense (optional, OFF until you have an account). Fill in both values to show Google ads in the DESK
+   BANNER spot (the ad above the computer). AdSense does not allow its ads in pop-ups, so the timed pop-ups
+   above always use the list above. Also turn on "child-directed" treatment in your AdSense account. */
+window.RETRO_ADSENSE = window.RETRO_ADSENSE || { client: '', slot: '' }; // e.g. client: 'ca-pub-1234567890123456', slot: '1234567890'
