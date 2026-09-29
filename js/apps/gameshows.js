@@ -1183,7 +1183,10 @@
   `;
 
   function openAnswer(W, api) {
-    let sound = api.load('sound', true), diff = api.load('diff', 'normal'), quick = api.load('quick', false);
+    let sound = api.load('sound', true), diff = api.load('diff', 'normal'), quick = api.load('quick', false), pace = api.load('pace', 'relaxed');
+    // Answer time: how long the player gets to buzz, answer and wager. Computer players buzz at their usual speed.
+    const PACE = { normal: ['Normal (fast)', 1], relaxed: ['Relaxed', 2.5], slow: ['Take your time', 4] };
+    const T = ms => Math.round(ms * (PACE[pace] || PACE.relaxed)[1]);
     const snd = soundKit(api, () => sound);
     const DIFF = { easy: { know: -0.18, speed: 1.35 }, normal: { know: 0, speed: 1 }, hard: { know: 0.08, speed: 0.78 } };
     let alive = true, gen = 0;
@@ -1370,7 +1373,7 @@
       S.clue.know = S.players.map(p => !p.human && Math.random() < knowP(p, S.clue));
       const ms = Math.min(6500, 1100 + S.clue.q.length * 42);
       say('Listen to the clue... wait for the lights!'); buzzBtn.classList.remove('go');
-      later(() => openBuzz(5000, true), ms + 450);
+      later(() => openBuzz(T(5000), true), ms + 450);
     }
     function openBuzz(ms, first) {
       S.phase = 'open'; card.classList.add('live'); buzzBtn.classList.add('go'); timer(ms);
@@ -1402,7 +1405,7 @@
       S.phase = 'answering'; S.aiT.forEach(cancel); S.aiT = []; cancel(S.winT);
       S.buzzer = i; card.classList.remove('live'); buzzBtn.classList.remove('go'); snd.buzzIn(); renderPods();
       const p = S.players[i];
-      if (p.human) askHuman(9000, 'Your answer?', t => judge(0, t, S.clue.value));
+      if (p.human) askHuman(T(9000), 'Your answer?', t => judge(0, t, S.clue.value));
       else aiAnswer(i, S.clue.know[i], t => judge(i, t, S.clue.value));
     }
 
@@ -1452,7 +1455,7 @@
       say(p.human ? `Sorry, no. -${money(value)}` : `${api.pick(p.pers.lines.wrong)} (-${money(value)})`, p.human ? '' : p.name);
       if (S.clue.wagerSq) { later(() => revealAnswer(), 1200); return; }
       const left = S.players.some((q, k) => !S.attempted.has(k));
-      if (left) later(() => { ansEl.innerHTML = ''; openBuzz(4500, false); }, 1300);
+      if (left) later(() => { ansEl.innerHTML = ''; openBuzz(T(4500), false); }, 1300);
       else later(revealAnswer, 1200);
     }
     function noAnswer() {
@@ -1482,7 +1485,7 @@
       later(() => {
         if (p.human) {
           say(`Wager from $5 to ${money(max)}.`);
-          askHuman(20000, `Enter your wager ($5 to ${money(max)}):`, t => {
+          askHuman(T(20000), `Enter your wager ($5 to ${money(max)}):`, t => {
             let w = parseInt(String(t).replace(/[^0-9]/g, ''), 10);
             if (!Number.isFinite(w)) w = 5;
             w = Math.max(5, Math.min(max, w));
@@ -1503,7 +1506,7 @@
       const knows = !p.human && Math.random() < knowP(p, S.clue) + 0.05;
       later(() => {
         S.phase = 'answering';
-        if (p.human) askHuman(12000, 'Your answer?', t => { S.attempted.delete(0); judge(0, t, w); });
+        if (p.human) askHuman(T(12000), 'Your answer?', t => { S.attempted.delete(0); judge(0, t, w); });
         else aiAnswer(i, knows, t => { S.attempted.delete(i); judge(i, t, w); });
       }, Math.min(5000, 900 + S.clue.q.length * 38));
     }
@@ -1543,11 +1546,11 @@
       const [cat, q, a] = S.final;
       S.clue = { q, a, cat, tag: '', value: 0, tier: 4 };
       chEl.textContent = 'LAST CALL - ' + cat; qEl.classList.remove('big'); qEl.textContent = q; ansEl.innerHTML = ''; card.classList.add('open'); card.style.transform = 'none'; snd.whoosh();
-      const ms = 30000;
+      const ms = T(30000);
       S.fin.elig.forEach(i => { const p = S.players[i]; if (!p.human) { const k = Math.random() < Math.min(0.9, knowP(p, S.clue) + 0.1); S.fin.answers[i] = k ? amShow(a) : wrongFinal(); } });
-      if (S.fin.elig.includes(0)) askHuman(ms, 'You have 30 seconds. Type your answer and press Enter.', t => { S.fin.answers[0] = t; finalReveal(); });
+      if (S.fin.elig.includes(0)) askHuman(ms, `You have ${ms >= 120000 ? Math.round(ms / 60000) + ' minutes' : Math.round(ms / 1000) + ' seconds'}. Type your answer and press Enter.`, t => { S.fin.answers[0] = t; finalReveal(); });
       else { timer(12000); say('The contestants are writing their answers...'); later(finalReveal, 12000); }
-      if (sound) for (let k = 0; k < 30; k++) later(() => snd.tock(), k * 1000);
+      if (sound) for (let k = 0; k < 30; k++) later(() => snd.tock(), (S.fin.elig.includes(0) ? Math.max(0, ms - 30000) : 0) + k * 1000);
     }
     function wrongFinal() {
       const all = AM_FINALS.filter(f => f !== S.final).map(f => amShow(f[2]));
@@ -1616,6 +1619,7 @@
         { label: 'Statistics', fn: () => { if (S.phase === 'title') showStats(titleScreen); else if (!ov.classList.contains('open')) showStats(closeOv); } }, '-', { label: 'Exit', fn: () => api.close() }] },
       { label: 'Options', items: () => [
         ...['easy', 'normal', 'hard'].map(d => ({ label: (d === diff ? '• ' : '   ') + d[0].toUpperCase() + d.slice(1) + ' opponents', fn: () => { diff = d; api.save('diff', d); } })), '-',
+        ...Object.keys(PACE).map(k => ({ label: (k === pace ? '• ' : '   ') + 'Answer time: ' + PACE[k][0], fn: () => { pace = k; api.save('pace', k); } })), '-',
         { label: (quick ? '• ' : '   ') + 'Quick game (next game)', fn: () => { quick = !quick; api.save('quick', quick); } },
         { label: (sound ? '• ' : '   ') + 'Sound', fn: () => { sound = !sound; api.save('sound', sound); } }] }
     ]);
